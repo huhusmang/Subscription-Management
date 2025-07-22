@@ -127,9 +127,38 @@
       };
     </script>
 
-    <!-- IMPORTANT: Never remove the following script reference, otherwise advanced features like element editing will not work -->
-    <script src="https://static.devv.ai/devv-app.js" type="module" onerror="console.warn('Failed to load devv-app.js')"></script>
+    <!-- Load main app immediately -->
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Load devv-app.js asynchronously with timeout to prevent blocking -->
+    <script>
+      (function() {
+        var script = document.createElement('script');
+        script.src = 'https://static.devv.ai/devv-app.js';
+        script.type = 'module';
+        script.async = true;
+        
+        var timeoutId = setTimeout(function() {
+          console.warn('devv-app.js loading timeout after 3 seconds, skipping to ensure fast app startup');
+          script.remove();
+        }, 3000); // 3秒超时
+        
+        script.onload = function() {
+          clearTimeout(timeoutId);
+          console.log('devv-app.js loaded successfully');
+        };
+        
+        script.onerror = function() {
+          clearTimeout(timeoutId);
+          console.warn('devv-app.js failed to load, but application will continue to function');
+        };
+        
+        // 延迟加载，让主应用先启动
+        setTimeout(function() {
+          document.head.appendChild(script);
+        }, 500);
+      })();
+    </script>
     
     <script>
       // Hide preloader once the app loads
