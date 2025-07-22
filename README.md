@@ -39,6 +39,12 @@ A modern subscription management system that helps users easily manage and track
 - **Local-first** - Local data storage based on SQLite for privacy protection
 - **Docker Deployment** - One-click deployment, ready to use out of the box
 
+## ⚠️ Version Compatibility
+
+> **Important Notice**: If you are using a version from before July 22, 2025, please refer to the [Trial Status Fix Documentation](docs/TRIAL_STATUS_FIX.md) to resolve subscription status validation issues.
+
+The early versions only supported `active`, `inactive`, and `cancelled` subscription statuses. If you encounter validation errors when creating subscriptions with `trial` status, please follow the fix guide.
+
 ## 📊 Feature Overview
 
 ### Core Features
@@ -175,6 +181,13 @@ npm run db:migrate
 # Reset database
 npm run db:reset
 ```
+
+## 📚 Documentation
+
+- [API Documentation](docs/API_DOCUMENTATION.md) - Complete API reference
+- [Backend Architecture](docs/BACKEND_ARCHITECTURE.md) - System architecture and design
+- [Project Structure](docs/STRUCTURE.md) - Project file organization
+- [Trial Status Fix](docs/TRIAL_STATUS_FIX.md) - Fix for early version compatibility issues
 
 ## 🤝 Contributing
 

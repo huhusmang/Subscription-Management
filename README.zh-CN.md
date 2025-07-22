@@ -39,6 +39,12 @@
 - **本地优先** - 基于SQLite的本地数据存储，保护隐私
 - **Docker部署** - 一键部署，开箱即用
 
+## ⚠️ 版本兼容性
+
+> **重要提示**: 如果您使用的是 2025年7月22日之前的版本，请参考 [Trial状态修复文档](docs/TRIAL_STATUS_FIX.md) 来解决订阅状态验证问题。
+
+早期版本仅支持 `active`、`inactive`、`cancelled` 订阅状态。如果您在创建 `trial` 状态订阅时遇到验证错误，请按照修复指南操作。
+
 ## 📊 功能特性
 
 ### 核心功能
@@ -175,6 +181,13 @@ npm run db:migrate
 # 重置数据库
 npm run db:reset
 ```
+
+## 📚 文档
+
+- [API文档](docs/API_DOCUMENTATION.md) - 完整的API参考
+- [后端架构](docs/BACKEND_ARCHITECTURE.md) - 系统架构和设计
+- [项目结构](docs/STRUCTURE.md) - 项目文件组织
+- [Trial状态修复](docs/TRIAL_STATUS_FIX.md) - 早期版本兼容性问题修复
 
 ## 🤝 贡献指南
 
