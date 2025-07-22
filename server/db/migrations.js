@@ -11,6 +11,11 @@ class DatabaseMigrations {
         version: 1,
         name: 'initial_schema_consolidated',
         up: () => this.migration_001_initial_schema_consolidated()
+      },
+      {
+        version: 2,
+        name: 'add_trial_status_support',
+        up: () => this.migration_002_add_trial_status_support()
       }
     ];
   }
@@ -161,6 +166,53 @@ class DatabaseMigrations {
     return statements;
   }
 
+  // Migration 002: Add trial status support
+  migration_002_add_trial_status_support() {
+    console.log('🔄 Adding trial status support to subscriptions table...');
+
+    try {
+      // Since SQLite doesn't support ALTER TABLE CHECK constraints directly,
+      // we need to recreate the table with the new constraint
+      this.db.exec(`
+        -- Create temporary table with new schema
+        CREATE TABLE subscriptions_temp (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          plan TEXT NOT NULL,
+          billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly')),
+          next_billing_date DATE,
+          last_billing_date DATE,
+          amount DECIMAL(10, 2) NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'CNY',
+          payment_method_id INTEGER NOT NULL,
+          start_date DATE,
+          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'cancelled', 'trial')),
+          category_id INTEGER NOT NULL,
+          renewal_type TEXT NOT NULL DEFAULT 'manual' CHECK (renewal_type IN ('auto', 'manual')),
+          notes TEXT,
+          website TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT,
+          FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE RESTRICT
+        );
+
+        -- Copy existing data to temporary table
+        INSERT INTO subscriptions_temp SELECT * FROM subscriptions;
+
+        -- Drop old table
+        DROP TABLE subscriptions;
+
+        -- Rename temporary table to original name
+        ALTER TABLE subscriptions_temp RENAME TO subscriptions;
+      `);
+
+      console.log('✅ Trial status support added successfully');
+    } catch (error) {
+      console.error('❌ Failed to add trial status support:', error.message);
+      throw error;
+    }
+  }
 
   close() {
     this.db.close();
