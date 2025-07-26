@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     currency TEXT NOT NULL DEFAULT 'CNY', -- Default currency from BASE_CURRENCY config
     payment_method_id INTEGER NOT NULL,
     start_date DATE,
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'cancelled')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trial', 'cancelled')),
     category_id INTEGER NOT NULL,
     renewal_type TEXT NOT NULL DEFAULT 'manual' CHECK (renewal_type IN ('auto', 'manual')),
     notes TEXT,

@@ -315,7 +315,7 @@ function validateSubscription(data) {
         .date(data.next_billing_date, 'next_billing_date')
         .date(data.start_date, 'start_date')
 
-        .enum(data.status, 'status', ['active', 'inactive', 'cancelled'])
+        .enum(data.status, 'status', ['active', 'trial', 'cancelled'])
         .enum(data.renewal_type, 'renewal_type', ['auto', 'manual'])
 
         .required(data.category_id, 'category_id')

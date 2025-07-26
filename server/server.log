@@ -1,0 +1,56 @@
+
+> server@1.0.0 start
+> node server.js
+
+📂 数据库路径: /Users/likai/Github/Clone/Subscription-Management/server/db/database.sqlite
+✅ Database tables already exist, skipping initialization.
+[INFO] Exchange rate scheduler started (daily at 2:00 AM CST)
+[INFO] Scheduler service started - Daily maintenance scheduled for 2:00 AM
+🚀 Subscription Management Server is running on http://localhost:3001
+📂 Frontend available at: http://localhost:3001
+🔧 API available at: http://localhost:3001/api
+[INFO] Generating payment history for subscription 1
+[INFO] Generated 1 payment history records for subscription 1
+[INFO] Updating monthly category summary for 2025-01
+[INFO] Updated monthly category summary for 2025-01: 1 categories
+[INFO] Processed payment 1 for monthly category summary
+[INFO] Payment history generated for subscription 1
+Error serving index.html: [Error: ENOENT: no such file or directory, stat '/Users/likai/Github/Clone/Subscription-Management/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/likai/Github/Clone/Subscription-Management/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+Error serving index.html: [Error: ENOENT: no such file or directory, stat '/Users/likai/Github/Clone/Subscription-Management/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/likai/Github/Clone/Subscription-Management/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+Error serving index.html: [Error: ENOENT: no such file or directory, stat '/Users/likai/Github/Clone/Subscription-Management/public/index.html'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: '/Users/likai/Github/Clone/Subscription-Management/public/index.html',
+  expose: false,
+  statusCode: 404,
+  status: 404
+}
+[INFO] Generating payment history for subscription 2
+[INFO] Generated 1 payment history records for subscription 2
+[INFO] Updating monthly category summary for 2025-07
+[INFO] Updated monthly category summary for 2025-07: 1 categories
+[INFO] Processed payment 2 for monthly category summary
+[INFO] Payment history generated for subscription 2
+[INFO] Generating payment history for subscription 3
+[INFO] Generated 1 payment history records for subscription 3
+[INFO] Updating monthly category summary for 2025-07
+[INFO] Updated monthly category summary for 2025-07: 2 categories
+[INFO] Processed payment 3 for monthly category summary
+[INFO] Payment history generated for subscription 3
