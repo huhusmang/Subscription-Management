@@ -25,6 +25,8 @@ export const useSubscriptionStats = () => {
           return total + (convertedAmount / 12)
         case 'quarterly':
           return total + (convertedAmount / 3)
+        case 'semiannual':
+          return total + (convertedAmount / 6)
         default:
           return total
       }
@@ -40,6 +42,8 @@ export const useSubscriptionStats = () => {
           return total + convertedAmount
         case 'quarterly':
           return total + (convertedAmount * 4)
+        case 'semiannual':
+          return total + (convertedAmount * 2)
         default:
           return total
       }

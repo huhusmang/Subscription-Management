@@ -644,6 +644,9 @@ class SubscriptionService extends BaseRepository {
             case 'quarterly':
                 nextDate.setMonth(nextDate.getMonth() + 3);
                 break;
+            case 'semiannual':
+                nextDate.setMonth(nextDate.getMonth() + 6);
+                break;
             case 'yearly':
                 nextDate.setFullYear(nextDate.getFullYear() + 1);
                 break;

@@ -117,6 +117,8 @@ const ContentComponent = ({
         return "secondary"
       case 'quarterly':
         return "outline"
+      case 'semiannual':
+        return "default"
       default:
         return "secondary"
     }
