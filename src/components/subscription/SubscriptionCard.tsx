@@ -90,6 +90,8 @@ export function SubscriptionCard({
         return "warning" // Orange/yellow for monthly
       case 'quarterly':
         return "info" // Blue for quarterly
+      case 'semiannual':
+        return "default"
       default:
         return "outline"
     }

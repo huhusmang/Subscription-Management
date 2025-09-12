@@ -21,6 +21,9 @@ export function calculateNextBillingDate(
     case 'quarterly':
       nextDate.setMonth(nextDate.getMonth() + 3)
       break
+    case 'semiannual':
+      nextDate.setMonth(nextDate.getMonth() + 6)
+      break
   }
 
   return nextDate.toISOString().split('T')[0]
@@ -52,6 +55,9 @@ export function calculateNextBillingDateFromStart(
         break
       case 'quarterly':
         nextBilling.setMonth(nextBilling.getMonth() + 3)
+        break
+      case 'semiannual':
+        nextBilling.setMonth(nextBilling.getMonth() + 6)
         break
     }
   }
@@ -209,6 +215,8 @@ export function getBillingCycleLabel(billingCycle: BillingCycle): string {
       return 'Yearly'
     case 'quarterly':
       return 'Quarterly'
+    case 'semiannual':
+      return 'Semiannual'
     default:
       return String(billingCycle)
   }

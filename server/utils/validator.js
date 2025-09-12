@@ -294,7 +294,7 @@ function validateSubscription(data) {
         .length(data.plan, 'plan', 1, 255)
 
         .required(data.billing_cycle, 'billing_cycle')
-        .enum(data.billing_cycle, 'billing_cycle', ['monthly', 'yearly', 'quarterly'])
+        .enum(data.billing_cycle, 'billing_cycle', ['monthly', 'yearly', 'quarterly', 'semiannual'])
 
         .required(data.amount, 'amount')
         .number(data.amount, 'amount')

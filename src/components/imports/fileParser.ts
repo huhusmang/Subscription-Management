@@ -37,7 +37,7 @@ const validateStatus = (status: string | undefined): SubscriptionStatus => {
 }
 
 const validateBillingCycle = (billingCycle: string | undefined): BillingCycle => {
-  if (billingCycle === 'monthly' || billingCycle === 'yearly' || billingCycle === 'quarterly') {
+  if (billingCycle === 'monthly' || billingCycle === 'yearly' || billingCycle === 'quarterly' || billingCycle === 'semiannual') {
     return billingCycle as BillingCycle
   }
   return 'monthly' // default fallback

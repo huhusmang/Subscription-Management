@@ -232,6 +232,7 @@ export function SubscriptionForm({
                   <SelectItem value="monthly">{t('common:monthly')}</SelectItem>
                   <SelectItem value="yearly">{t('common:yearly')}</SelectItem>
                   <SelectItem value="quarterly">{t('common:quarterly')}</SelectItem>
+                  <SelectItem value="semiannual">{t('common:semiannual')}</SelectItem>
                 </SelectContent>
               </Select>
             </FormField>

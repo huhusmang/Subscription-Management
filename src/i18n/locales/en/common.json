@@ -66,6 +66,7 @@
   "monthly": "Monthly",
   "yearly": "Yearly",
   "quarterly": "Quarterly",
+  "semiannual": "Semiannual",
   "ascending": "Ascending",
   "descending": "Descending",
   "dataRefreshed": "Data refreshed",

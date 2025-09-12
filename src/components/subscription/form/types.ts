@@ -7,7 +7,7 @@ export type FormErrors = {
 export type SubscriptionFormData = {
   name: string
   plan: string
-  billingCycle: "monthly" | "quarterly" | "yearly"
+  billingCycle: "monthly" | "quarterly" | "yearly" | "semiannual"
   amount: number
   currency: string
   paymentMethodId: number

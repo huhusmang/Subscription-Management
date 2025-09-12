@@ -6,7 +6,7 @@ export interface Subscription {
   category: string;
   price: number;
   currency: string;
-  billingCycle: 'monthly' | 'quarterly' | 'yearly';
+  billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'semiannual';
   status: 'active' | 'trial' | 'cancelled';
   nextBillingDate?: string;
   lastBillingDate?: string;

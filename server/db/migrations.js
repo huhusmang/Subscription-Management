@@ -21,6 +21,11 @@ class DatabaseMigrations {
         version: 3,
         name: 'add_hkd_currency_support',
         up: () => this.migration_003_add_hkd_currency_support()
+      },
+      {
+        version: 4,
+        name: 'add_semiannual_billing_cycle',
+        up: () => this.migration_004_add_semiannual_billing_cycle()
       }
     ];
   }
@@ -293,6 +298,84 @@ class DatabaseMigrations {
     }
 
     console.log('✅ HKD currency support added successfully');
+  }
+
+  // Migration 004: Add 'semiannual' to subscriptions.billing_cycle CHECK constraint
+  migration_004_add_semiannual_billing_cycle() {
+    console.log("📝 Updating subscriptions.billing_cycle to include 'semiannual'...");
+
+    // Ensure foreign keys are enforced during migration
+    this.db.pragma('foreign_keys = ON');
+
+    // 1) Rename existing table
+    this.db.exec(`
+      ALTER TABLE subscriptions RENAME TO subscriptions_old;
+    `);
+
+    // 2) Recreate subscriptions table with updated CHECK constraint
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly', 'semiannual')),
+        next_billing_date DATE,
+        last_billing_date DATE,
+        amount DECIMAL(10, 2) NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'CNY',
+        payment_method_id INTEGER NOT NULL,
+        start_date DATE,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trial', 'cancelled')),
+        category_id INTEGER NOT NULL,
+        renewal_type TEXT NOT NULL DEFAULT 'manual' CHECK (renewal_type IN ('auto', 'manual')),
+        notes TEXT,
+        website TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT,
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE RESTRICT
+      );
+    `);
+
+    // 3) Copy data
+    this.db.exec(`
+      INSERT INTO subscriptions (
+        id, name, plan, billing_cycle, next_billing_date, last_billing_date, amount, currency,
+        payment_method_id, start_date, status, category_id, renewal_type, notes, website,
+        created_at, updated_at
+      )
+      SELECT
+        id, name, plan, billing_cycle, next_billing_date, last_billing_date, amount, currency,
+        payment_method_id, start_date, status, category_id, renewal_type, notes, website,
+        created_at, updated_at
+      FROM subscriptions_old;
+    `);
+
+    // 4) Recreate indexes
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_category_id ON subscriptions(category_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_payment_method_id ON subscriptions(payment_method_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing_date ON subscriptions(next_billing_date);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_cycle ON subscriptions(billing_cycle);
+    `);
+
+    // 5) Recreate update trigger
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS subscriptions_updated_at
+      AFTER UPDATE ON subscriptions
+      FOR EACH ROW
+      BEGIN
+          UPDATE subscriptions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+      END;
+    `);
+
+    // 6) Drop old table
+    this.db.exec(`
+      DROP TABLE IF EXISTS subscriptions_old;
+    `);
+
+    console.log("✅ Updated subscriptions.billing_cycle to include 'semiannual'");
   }
 
   // Helper method to parse SQL statements properly

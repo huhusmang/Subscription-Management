@@ -62,12 +62,14 @@ export const getYearRange = (date: Date) => ({
 });
 
 // Period calculation functions
-export const getDaysInPeriod = (period: 'monthly' | 'quarterly' | 'yearly', date: Date = new Date()): number => {
+export const getDaysInPeriod = (period: 'monthly' | 'quarterly' | 'yearly' | 'semiannual', date: Date = new Date()): number => {
   switch (period) {
     case 'monthly':
       return getDaysInMonth(date);
     case 'quarterly':
       return 91; // Approximate
+    case 'semiannual':
+      return 182; // Approximate
     case 'yearly':
       return getDaysInYear(date);
     default:
@@ -78,7 +80,7 @@ export const getDaysInPeriod = (period: 'monthly' | 'quarterly' | 'yearly', date
 // Billing calculation functions
 export const calculateNextBillingDate = (
   lastBillingDate: Date | string,
-  billingCycle: 'monthly' | 'quarterly' | 'yearly'
+  billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'semiannual'
 ): Date => {
   const date = typeof lastBillingDate === 'string' ? new Date(lastBillingDate) : lastBillingDate;
   
@@ -87,6 +89,8 @@ export const calculateNextBillingDate = (
       return new Date(date.getFullYear(), date.getMonth() + 1, date.getDate());
     case 'quarterly':
       return new Date(date.getFullYear(), date.getMonth() + 3, date.getDate());
+    case 'semiannual':
+      return new Date(date.getFullYear(), date.getMonth() + 6, date.getDate());
     case 'yearly':
       return new Date(date.getFullYear() + 1, date.getMonth(), date.getDate());
     default:
