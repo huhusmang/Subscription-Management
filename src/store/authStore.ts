@@ -22,7 +22,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const data = await authApi.me()
           set({ user: data.user, isLoading: false })
-        } catch (err) {
+        } catch {
           set({ user: null, isLoading: false })
         }
       },
@@ -33,8 +33,8 @@ export const useAuthStore = create<AuthState>()(
           const data = await authApi.me()
           set({ user: data.user, isLoading: false })
           return true
-        } catch (err) {
-          set({ error: err instanceof Error ? err.message : 'Login failed', isLoading: false })
+        } catch (e) {
+          set({ error: e instanceof Error ? e.message : 'Login failed', isLoading: false })
           return false
         }
       },

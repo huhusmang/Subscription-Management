@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
-import { Download, Upload, Eye, EyeOff } from "lucide-react"
+import { Download, Upload } from "lucide-react"
 
 import { Subscription } from "@/store/subscriptionStore"
 
@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
+// import removed: Input (no longer used)
 
 import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -40,7 +40,7 @@ import {
   exportSubscriptionsToJSON,
   downloadFile,
 } from "@/lib/subscription-utils"
-import { useToast } from "@/hooks/use-toast"
+// import removed: useToast (no longer used)
 import { ExchangeRateManager } from "@/components/ExchangeRateManager"
 import { OptionsManager } from "@/components/subscription/OptionsManager"
 import { NotificationSettings } from "@/components/notification/NotificationSettings"
@@ -48,7 +48,6 @@ import { useTheme } from "next-themes"
 
 export function SettingsPage() {
   const { t } = useTranslation(['settings', 'common'])
-  const { toast } = useToast()
   const [searchParams] = useSearchParams()
 
   // Import modal state
@@ -73,7 +72,6 @@ export function SettingsPage() {
   } = useSettingsStore()
 
   // Removed API Key state
-  const [isKeyVisible, setIsKeyVisible] = useState(false)
 
   // Subscription store methods
   const { subscriptions, resetSubscriptions, addSubscription } = useSubscriptionStore()
