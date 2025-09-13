@@ -28,21 +28,7 @@ async function initializeDatabase() {
 
         console.log('✅ Database schema is up to date!');
 
-        // Generate API key if not provided via environment
-        let apiKey = config.getApiKey();
-        if (!apiKey) {
-            apiKey = crypto.randomBytes(32).toString('hex');
-            console.log('\n🔑 Generated API Key:');
-            console.log('=====================================');
-            console.log(apiKey);
-            console.log('=====================================');
-            console.log('\n⚠️  IMPORTANT: Save this API key securely!');
-            console.log('Add it to your .env file:');
-            console.log(`API_KEY=${apiKey}`);
-            console.log('');
-        } else {
-            console.log('✅ Using API key from environment variables');
-        }
+        // API key generation removed. Session-based auth is used instead.
 
         console.log('🎉 Database initialization completed successfully!');
         console.log('\n📊 Database is ready with all required tables and data.');

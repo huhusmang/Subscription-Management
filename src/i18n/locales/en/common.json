@@ -147,7 +147,7 @@
   "tryAgain": "Try again",
   "unexpectedError": "An unexpected error occurred",
   "invalidRequest": "Invalid request. Please check your input.",
-  "authRequired": "Authentication required. Please check your API key.",
+  "authRequired": "Authentication required. Please login.",
   "noPermission": "You do not have permission to perform this action.",
   "notFound": "The requested resource was not found.",
   "conflict": "Conflict with existing data.",

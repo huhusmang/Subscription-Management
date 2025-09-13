@@ -56,6 +56,7 @@ class ApiClient {
         },
         body: options?.body ? JSON.stringify(options.body) : undefined,
         signal: options?.signal,
+        credentials: 'include',
       });
 
       const responseData = await response.json();

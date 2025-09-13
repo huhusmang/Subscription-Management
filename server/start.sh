@@ -35,9 +35,7 @@ else
 fi
 
 # Environment validation
-if [ -z "$API_KEY" ]; then
-    echo "[WARN] API_KEY not set. Server functionality may be limited."
-fi
+echo "[INFO] API key auth removed. Using session-based authentication."
 
 if [ -z "$TIANAPI_KEY" ]; then
     echo "[INFO] TIANAPI_KEY not set. Exchange rate updates disabled."

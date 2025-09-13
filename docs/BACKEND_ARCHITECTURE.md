@@ -207,9 +207,6 @@ const getDatabasePath = () => {
     return path.join(dbDir, 'database.sqlite');
 };
 
-// API密钥配置
-const getApiKey = () => process.env.API_KEY;
-
 // 天行数据API密钥
 const getTianApiKey = () => process.env.TIANAPI_KEY;
 ```
@@ -217,38 +214,26 @@ const getTianApiKey = () => process.env.TIANAPI_KEY;
 ### 环境变量
 ```bash
 # 必需配置
-API_KEY=your_secret_api_key_here
-
-# 可选配置
 PORT=3001
 BASE_CURRENCY=CNY
 NODE_ENV=production
 DATABASE_PATH=/app/data/database.sqlite
 TIANAPI_KEY=your_tianapi_key_here
+SESSION_SECRET=your_random_session_secret
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=<bcrypt-hash>
 ```
 
 ## 🛡 中间件系统
 
-### 认证中间件 (middleware/auth.js)
+### 认证中间件 (middleware/requireLogin.js)
 ```javascript
-const apiKeyAuth = (req, res, next) => {
-    const apiKey = req.headers['x-api-key'];
-    const expectedApiKey = process.env.API_KEY;
-    
-    if (!expectedApiKey) {
-        return res.status(500).json({ 
-            error: 'API key not configured on server' 
-        });
+function requireLogin(req, res, next) {
+    if (req.session && req.session.user) {
+        return next();
     }
-    
-    if (!apiKey || apiKey !== expectedApiKey) {
-        return res.status(401).json({ 
-            error: 'Invalid or missing API key' 
-        });
-    }
-    
-    next();
-};
+    return res.status(401).json({ message: 'Authentication required' });
+}
 ```
 
 ### 错误处理中间件 (middleware/errorHandler.js)
@@ -629,8 +614,9 @@ class SubscriptionRenewalScheduler {
 const apiRouter = express.Router();
 const protectedApiRouter = express.Router();
 
-// 应用认证中间件到受保护路由
-protectedApiRouter.use(apiKeyAuth);
+// 受保护路由需要登录
+apiRouter.use(requireLogin);
+protectedApiRouter.use(requireLogin);
 
 // 注册路由模块
 apiRouter.use('/subscriptions', createSubscriptionRoutes(db));

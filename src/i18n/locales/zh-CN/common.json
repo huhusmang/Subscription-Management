@@ -148,7 +148,7 @@
   "tryAgain": "重试",
   "unexpectedError": "发生了意外错误",
   "invalidRequest": "请求无效。请检查您的输入。",
-  "authRequired": "需要身份验证。请检查您的API密钥。",
+  "authRequired": "需要登录。",
   "noPermission": "您没有执行此操作的权限。",
   "notFound": "未找到请求的资源。",
   "conflict": "与现有数据冲突。",
