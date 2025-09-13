@@ -62,8 +62,6 @@ export function SettingsPage() {
 
   // Settings store values
   const {
-    apiKey,
-    setApiKey,
     theme,
     setTheme,
 
@@ -74,8 +72,7 @@ export function SettingsPage() {
     fetchSettings
   } = useSettingsStore()
 
-  // API Key local state
-  const [tempApiKey, setTempApiKey] = useState(apiKey || "")
+  // Removed API Key state
   const [isKeyVisible, setIsKeyVisible] = useState(false)
 
   // Subscription store methods
@@ -89,22 +86,11 @@ export function SettingsPage() {
     initializeSettings()
   }, [initializeSettings])
   
-  // When the API key from the store changes, update the local state
-  useEffect(() => {
-    if (apiKey) {
-      setTempApiKey(apiKey)
-    }
-  }, [apiKey])
+  // Removed API key effects
 
 
 
-  const handleSaveApiKey = async () => {
-    await setApiKey(tempApiKey)
-    toast({
-      title: t('apiKeySaved'),
-      description: t('apiKeySavedDesc'),
-    })
-  }
+  // Removed API key handlers
 
   // Handle data export
   const handleExportData = () => {
@@ -213,38 +199,15 @@ export function SettingsPage() {
         <TabsContent value="data" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t('apiSynchronization')}</CardTitle>
+              <CardTitle>{t('dataManagement')}</CardTitle>
               <CardDescription>
-                {t('manageApiKeyDesc')}
+                {t('exportImportDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="api-key">{t('apiKey')}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="api-key"
-                    type={isKeyVisible ? "text" : "password"}
-                    placeholder={t('enterApiKey')}
-                    value={tempApiKey}
-                    onChange={(e) => setTempApiKey(e.target.value)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsKeyVisible(!isKeyVisible)}
-                  >
-                    {isKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('apiKeyRequired')}
-                </p>
-              </div>
+              {/* API key UI removed since auth is session-based */}
             </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveApiKey}>{t('saveApiKey')}</Button>
-            </CardFooter>
+            <CardFooter className="hidden" />
           </Card>
 
           <Card className="mt-4">

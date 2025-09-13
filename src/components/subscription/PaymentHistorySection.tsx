@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useToast } from "@/hooks/use-toast"
-import { useSettingsStore } from "@/store/settingsStore"
 import { PaymentRecord, PaymentRecordApi, transformPaymentsFromApi } from "@/utils/dataTransform"
 import { PaymentHistorySheet } from "./PaymentHistorySheet"
 import { apiClient } from '@/utils/api-client'
@@ -41,7 +40,7 @@ export function PaymentHistorySection({ subscriptionId, subscriptionName }: Paym
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null)
   const { toast } = useToast()
-  const { apiKey } = useSettingsStore()
+  
 
 
   // Fetch payment history for this subscription
@@ -77,7 +76,7 @@ export function PaymentHistorySection({ subscriptionId, subscriptionName }: Paym
     handleEditPayment: editPayment,
     handleDeleteClick,
     deleteConfirmation
-  } = usePaymentOperations(apiKey, fetchPaymentHistory)
+  } = usePaymentOperations(undefined, fetchPaymentHistory)
 
   // Handle adding new payment
   const handleAddPayment = async (paymentData: PaymentApiData) => {

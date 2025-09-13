@@ -76,7 +76,7 @@
 - **框架**: Express 5
 - **数据库**: SQLite + better-sqlite3
 - **定时任务**: node-cron
-- **API认证**: API Key
+- **认证**: 基于会话（Session）的登录，所有接口需登录
 - **通知服务**: Telegram Bot API + 邮件通知（规划中）
 
 ### 部署
@@ -179,9 +179,6 @@ npm run dev
 创建 `.env` 文件并配置以下变量：
 
 ```bash
-# API安全密钥 (所有受保护接口必需)
-API_KEY=your_secret_api_key_here
-
 # 服务端口 (可选，默认3001)
 PORT=3001
 
@@ -195,6 +192,13 @@ DATABASE_PATH=/app/data/database.sqlite
 # 天行数据API密钥 (可选，用于实时汇率更新)
 # 获取密钥: https://www.tianapi.com/
 TIANAPI_KEY=your_tianapi_key_here
+
+# 会话认证
+SESSION_SECRET=your_random_session_secret
+ADMIN_USERNAME=admin
+# 推荐配置哈希（生产环境），或在开发环境使用明文密码
+ADMIN_PASSWORD_HASH=$2a$12$examplehash...
+# ADMIN_PASSWORD=admin
 
 # Telegram机器人令牌 (Telegram通知必需)
 # 从Telegram的@BotFather获取

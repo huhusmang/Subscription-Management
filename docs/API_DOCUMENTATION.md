@@ -9,13 +9,13 @@
 
 ## 认证机制
 
-受保护的端点需要在请求头中包含API密钥：
+所有接口均需要登录后访问（基于会话的身份验证）。
 
-```http
-X-API-KEY: your-api-key-here
-```
+相关端点：
 
-API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
+- `POST /api/auth/login`（请求体包含 `username`, `password`）
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
 
 ## 响应格式
 
@@ -169,7 +169,7 @@ API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
 #### GET /subscriptions/:id/payment-history
 获取订阅的支付历史。
 
-### 受保护接口 (需要API密钥)
+### 受保护接口 (需要登录)
 
 #### POST /protected/subscriptions
 创建新订阅。
@@ -258,7 +258,7 @@ API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
 #### GET /payment-history/stats/quarterly
 获取季度支付统计。
 
-### 受保护接口
+### 受保护接口 (需要登录)
 
 #### POST /protected/payment-history
 创建支付记录。
@@ -300,7 +300,7 @@ API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
 #### GET /settings/themes
 获取支持的主题列表。
 
-### 受保护接口
+### 受保护接口 (需要登录)
 
 #### PUT /protected/settings
 更新系统设置。
@@ -368,7 +368,7 @@ API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
 ## 错误代码
 
 - `400` - 请求参数错误
-- `401` - 未授权（缺少或无效的API密钥）
+- `401` - 未授权（未登录或会话无效）
 - `404` - 资源未找到
 - `500` - 服务器内部错误
 
@@ -378,7 +378,7 @@ API密钥需要在 `.env` 文件中配置：`API_KEY=your-secret-key`
 ```bash
 curl -X POST http://localhost:3001/api/protected/subscriptions \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: your-api-key" \
+  -b cookie.txt -c cookie.txt \
   -d '{
     "name": "Netflix",
     "plan": "Premium",

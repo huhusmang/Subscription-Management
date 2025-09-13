@@ -8,21 +8,7 @@ export const getHeaders = (method: string = 'GET'): HeadersInit => {
   if (method !== 'GET') {
     headers['Content-Type'] = 'application/json';
   }
-  
-  // Get API key from settingsStore state persisted in localStorage
-  const persistedState = localStorage.getItem('settings-storage');
-  if (persistedState) {
-    try {
-      const parsed = JSON.parse(persistedState);
-      const apiKey = parsed.state?.apiKey;
-      if (apiKey) {
-        headers['X-API-KEY'] = apiKey;
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }
-  
+  // Session-based auth via cookies; no API key header needed
   return headers;
 };
 
