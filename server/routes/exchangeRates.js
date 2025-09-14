@@ -1,5 +1,6 @@
 const express = require('express');
 const ExchangeRateController = require('../controllers/exchangeRateController');
+const { getBaseCurrency } = require('../config/currencies');
 
 function createExchangeRateRoutes(db) {
     const router = express.Router();
@@ -25,7 +26,8 @@ function createExchangeRateRoutes(db) {
         res.json({
             tianApiConfigured: !!process.env.TIANAPI_KEY,
             provider: 'tianapi.com',
-            updateFrequency: 'Daily (Automatic)'
+            updateFrequency: 'Daily (Automatic)',
+            baseCurrency: getBaseCurrency()
         });
     });
 

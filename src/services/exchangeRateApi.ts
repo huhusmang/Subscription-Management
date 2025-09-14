@@ -21,6 +21,7 @@ export interface ExchangeRateConfigStatus {
   tianApiConfigured: boolean;
   provider: string;
   updateFrequency: string;
+  baseCurrency?: string;
 }
 
 /**
