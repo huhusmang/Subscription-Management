@@ -307,6 +307,9 @@ function calculateNextBillingDate(date, billingCycle) {
         case 'quarterly':
             nextDate.setMonth(nextDate.getMonth() + 3);
             break;
+        case 'semiannual':
+            nextDate.setMonth(nextDate.getMonth() + 6);
+            break;
         default:
             throw new Error(`未知的计费周期: ${billingCycle}`);
     }

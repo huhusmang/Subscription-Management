@@ -65,6 +65,7 @@ export const PAYMENT_STATUS = {
 export const BILLING_CYCLES = {
   MONTHLY: 'monthly',
   QUARTERLY: 'quarterly',
+  SEMIANNUAL: 'semiannual',
   YEARLY: 'yearly',
 } as const;
 

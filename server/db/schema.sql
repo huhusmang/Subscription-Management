@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     plan TEXT NOT NULL,
-    billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly')),
+    billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly', 'semiannual')),
     next_billing_date DATE,
     last_billing_date DATE,
     amount DECIMAL(10, 2) NOT NULL,
