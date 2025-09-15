@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import { getBaseCurrency } from '@/config/currency'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
@@ -51,6 +51,7 @@ export function SubscriptionForm({
     categories,
     paymentMethods
   } = useSubscriptionStore()
+  const { currency: userCurrency } = useSettingsStore()
   
   const { t } = useTranslation(['common', 'subscription', 'validation'])
 
@@ -60,7 +61,7 @@ export function SubscriptionForm({
     plan: "",
     billingCycle: "monthly",
     amount: 0,
-    currency: getBaseCurrency(),
+    currency: userCurrency,
     paymentMethodId: 0,
     startDate: format(new Date(), "yyyy-MM-dd"),
     nextBillingDate: calculateNextBillingDateFromStart(new Date(), new Date(), "monthly"),
@@ -98,7 +99,7 @@ export function SubscriptionForm({
           plan: "",
           billingCycle: "monthly",
           amount: 0,
-          currency: "USD",
+          currency: userCurrency,
           paymentMethodId: 0,
           startDate: format(new Date(), "yyyy-MM-dd"),
           nextBillingDate: calculateNextBillingDateFromStart(new Date(), new Date(), "monthly"),
@@ -112,7 +113,7 @@ export function SubscriptionForm({
       setErrors({})
       setNextDateTouched(false)
     }
-  }, [open, initialData])
+  }, [open, initialData, userCurrency])
 
   // Handle basic input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
