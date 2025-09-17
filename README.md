@@ -76,7 +76,7 @@ A modern subscription management system that helps users easily manage and track
 - **Framework**: Express 5
 - **Database**: SQLite + better-sqlite3
 - **Scheduled Tasks**: node-cron
-- **API Authentication**: API Key
+- **Authentication**: Session-based login (username/password), all endpoints require login
 - **Notifications**: Telegram Bot API + Email (planned)
 
 ### Deployment
@@ -179,9 +179,6 @@ Future updates will include proper database migrations to avoid this issue.
 Create a `.env` file and configure the following variables:
 
 ```bash
-# API security key (required for all protected endpoints)
-API_KEY=your_secret_api_key_here
-
 # Service port (optional, default 3001)
 PORT=3001
 
@@ -195,6 +192,14 @@ DATABASE_PATH=/app/data/database.sqlite
 # Tianapi API key (optional, for real-time exchange rate updates)
 # Get your key from: https://www.tianapi.com/
 TIANAPI_KEY=your_tianapi_key_here
+
+# Session auth (required)
+SESSION_SECRET=your_random_session_secret
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password
+
+# On first start the server will print a derived ADMIN_PASSWORD_HASH.
+# Copy that hash into your .env and remove ADMIN_PASSWORD when you deploy.
 
 # Telegram Bot Token (required for Telegram notifications)
 # Get from @BotFather on Telegram

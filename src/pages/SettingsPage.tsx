@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
-import { Download, Upload, Eye, EyeOff } from "lucide-react"
+import { Download, Upload } from "lucide-react"
 
 import { Subscription } from "@/store/subscriptionStore"
 
@@ -27,7 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
+// import removed: Input (no longer used)
 
 import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -40,7 +40,7 @@ import {
   exportSubscriptionsToJSON,
   downloadFile,
 } from "@/lib/subscription-utils"
-import { useToast } from "@/hooks/use-toast"
+// import removed: useToast (no longer used)
 import { ExchangeRateManager } from "@/components/ExchangeRateManager"
 import { OptionsManager } from "@/components/subscription/OptionsManager"
 import { NotificationSettings } from "@/components/notification/NotificationSettings"
@@ -48,7 +48,6 @@ import { useTheme } from "next-themes"
 
 export function SettingsPage() {
   const { t } = useTranslation(['settings', 'common'])
-  const { toast } = useToast()
   const [searchParams] = useSearchParams()
 
   // Import modal state
@@ -62,8 +61,6 @@ export function SettingsPage() {
 
   // Settings store values
   const {
-    apiKey,
-    setApiKey,
     theme,
     setTheme,
 
@@ -74,9 +71,7 @@ export function SettingsPage() {
     fetchSettings
   } = useSettingsStore()
 
-  // API Key local state
-  const [tempApiKey, setTempApiKey] = useState(apiKey || "")
-  const [isKeyVisible, setIsKeyVisible] = useState(false)
+  // Removed API Key state
 
   // Subscription store methods
   const { subscriptions, resetSubscriptions, addSubscription } = useSubscriptionStore()
@@ -89,22 +84,11 @@ export function SettingsPage() {
     initializeSettings()
   }, [initializeSettings])
   
-  // When the API key from the store changes, update the local state
-  useEffect(() => {
-    if (apiKey) {
-      setTempApiKey(apiKey)
-    }
-  }, [apiKey])
+  // Removed API key effects
 
 
 
-  const handleSaveApiKey = async () => {
-    await setApiKey(tempApiKey)
-    toast({
-      title: t('apiKeySaved'),
-      description: t('apiKeySavedDesc'),
-    })
-  }
+  // Removed API key handlers
 
   // Handle data export
   const handleExportData = () => {
@@ -212,42 +196,6 @@ export function SettingsPage() {
    
         <TabsContent value="data" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>{t('apiSynchronization')}</CardTitle>
-              <CardDescription>
-                {t('manageApiKeyDesc')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="api-key">{t('apiKey')}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="api-key"
-                    type={isKeyVisible ? "text" : "password"}
-                    placeholder={t('enterApiKey')}
-                    value={tempApiKey}
-                    onChange={(e) => setTempApiKey(e.target.value)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsKeyVisible(!isKeyVisible)}
-                  >
-                    {isKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {t('apiKeyRequired')}
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveApiKey}>{t('saveApiKey')}</Button>
-            </CardFooter>
-          </Card>
-
-          <Card className="mt-4">
             <CardHeader>
               <CardTitle>{t('dataManagement')}</CardTitle>
               <CardDescription>

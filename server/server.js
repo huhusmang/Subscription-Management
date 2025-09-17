@@ -10,7 +10,8 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Import modules
 const { initializeDatabase } = require('./config/database');
-const { apiKeyAuth } = require('./middleware/auth');
+const { createSessionMiddleware } = require('./middleware/session');
+const { requireLogin } = require('./middleware/requireLogin');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { createSubscriptionRoutes, createProtectedSubscriptionRoutes } = require('./routes/subscriptions');
 const { createSubscriptionManagementRoutes } = require('./routes/subscriptionManagement');
@@ -26,13 +27,15 @@ const { createNotificationRoutes, createProtectedNotificationRoutes } = require(
 const { createSchedulerRoutes, createProtectedSchedulerRoutes } = require('./routes/scheduler');
 const userPreferencesRoutes = require('./routes/userPreferences');
 const templatesRoutes = require('./routes/templates');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const port = process.env.PORT || 3001; // Use PORT from environment or default to 3001
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(createSessionMiddleware());
 
 // Database setup
 const db = initializeDatabase();
@@ -52,8 +55,8 @@ notificationScheduler.start();
 // Serve static files from the public directory (frontend build)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// API health check endpoint
-app.get('/api/health', (req, res) => {
+// API health check endpoint (requires login)
+app.get('/api/health', requireLogin, (req, res) => {
   res.json({ message: 'Subscription Management Backend is running!', status: 'healthy' });
 });
 
@@ -61,8 +64,12 @@ app.get('/api/health', (req, res) => {
 const apiRouter = express.Router();
 const protectedApiRouter = express.Router();
 
-// Apply auth middleware to the protected router
-protectedApiRouter.use(apiKeyAuth);
+// Auth routes (no login required)
+app.use('/api/auth', authRoutes);
+
+// Apply session auth to all API routes
+apiRouter.use(requireLogin);
+protectedApiRouter.use(requireLogin);
 
 // Register route modules
 apiRouter.use('/subscriptions', createSubscriptionRoutes(db));

@@ -6,7 +6,7 @@ export type ErrorHandler = (error: Error | ApiError) => void;
 // Default error messages
 const DEFAULT_ERROR_MESSAGES: Record<number, string> = {
   400: 'Invalid request. Please check your input.',
-  401: 'Authentication required. Please check your API key.',
+  401: 'Authentication required. Please login.',
   403: 'You do not have permission to perform this action.',
   404: 'The requested resource was not found.',
   409: 'Conflict with existing data.',

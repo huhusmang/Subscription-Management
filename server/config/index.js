@@ -62,14 +62,6 @@ class Config {
     }
 
     /**
-     * 获取 API 密钥
-     * @returns {string|null} API 密钥
-     */
-    getApiKey() {
-        return process.env.API_KEY || null;
-    }
-
-    /**
      * 获取天行 API 密钥
      * @returns {string|null} 天行 API 密钥
      */
@@ -166,7 +158,7 @@ class Config {
             databasePath: this.getDatabasePath(),
             logLevel: this.getLogLevel(),
             baseCurrency: this.getBaseCurrency(),
-            hasApiKey: !!this.getApiKey(),
+            hasApiKey: false,
             hasTianApiKey: !!this.getTianApiKey(),
             databaseExists: this.databaseExists()
         };
@@ -183,7 +175,7 @@ class Config {
         console.log(`   Database Path: ${summary.databasePath}`);
         console.log(`   Log Level: ${summary.logLevel}`);
         console.log(`   Base Currency: ${summary.baseCurrency}`);
-        console.log(`   API Key: ${summary.hasApiKey ? '✅ Set' : '❌ Not set'}`);
+        console.log(`   API Key: ❌ Removed (session-based auth)`);
         console.log(`   TianAPI Key: ${summary.hasTianApiKey ? '✅ Set' : '❌ Not set'}`);
         console.log(`   Database Exists: ${summary.databaseExists ? '✅ Yes' : '❌ No'}`);
     }

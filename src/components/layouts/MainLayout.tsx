@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/ModeToggle'
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '@/store/authStore'
+import { Button as UIButton } from '@/components/ui/button'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -19,6 +21,7 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation()
   const { t } = useTranslation('navigation')
+  const { user, logout } = useAuthStore()
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -69,6 +72,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="flex items-center gap-2">
               <LanguageSwitcher />
               <ModeToggle />
+              {user && (
+                <UIButton variant="ghost" size="sm" onClick={logout}>Logout</UIButton>
+              )}
             </div>
           </div>
         </div>

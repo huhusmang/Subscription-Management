@@ -21,6 +21,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "express-session": "^1.18.1",
+    "bcryptjs": "^2.4.3"
   }
 }
