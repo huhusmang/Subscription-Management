@@ -221,7 +221,9 @@ DATABASE_PATH=/app/data/database.sqlite
 TIANAPI_KEY=your_tianapi_key_here
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD_HASH=<bcrypt-hash>
+ADMIN_PASSWORD=your_secure_password
+
+# 首次启动时，系统会根据 ADMIN_PASSWORD 生成 bcrypt 哈希并输出日志，便于将其转存到 ADMIN_PASSWORD_HASH 后删除明文密码。
 ```
 
 ## 🛡 中间件系统

@@ -76,7 +76,7 @@ export function PaymentHistorySection({ subscriptionId, subscriptionName }: Paym
     handleEditPayment: editPayment,
     handleDeleteClick,
     deleteConfirmation
-  } = usePaymentOperations(undefined, fetchPaymentHistory)
+  } = usePaymentOperations(fetchPaymentHistory)
 
   // Handle adding new payment
   const handleAddPayment = async (paymentData: PaymentApiData) => {

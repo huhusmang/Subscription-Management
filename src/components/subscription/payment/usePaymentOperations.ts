@@ -15,7 +15,6 @@ interface PaymentApiData {
 }
 
 export const usePaymentOperations = (
-  _apiKey: string | undefined,
   fetchPaymentHistory: () => void
 ) => {
   const { toast } = useToast()

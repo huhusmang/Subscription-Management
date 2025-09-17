@@ -193,12 +193,12 @@ DATABASE_PATH=/app/data/database.sqlite
 # 获取密钥: https://www.tianapi.com/
 TIANAPI_KEY=your_tianapi_key_here
 
-# 会话认证
+# 会话认证（必填）
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
-# 推荐配置哈希（生产环境），或在开发环境使用明文密码
-ADMIN_PASSWORD_HASH=$2a$12$examplehash...
-# ADMIN_PASSWORD=admin
+ADMIN_PASSWORD=your_secure_password
+
+# 首次启动时会输出生成的 ADMIN_PASSWORD_HASH，请将其复制到 .env 并删除 ADMIN_PASSWORD 以提升安全性。
 
 # Telegram机器人令牌 (Telegram通知必需)
 # 从Telegram的@BotFather获取

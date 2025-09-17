@@ -193,12 +193,13 @@ DATABASE_PATH=/app/data/database.sqlite
 # Get your key from: https://www.tianapi.com/
 TIANAPI_KEY=your_tianapi_key_here
 
-# Session auth
+# Session auth (required)
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
-# Use either ADMIN_PASSWORD_HASH (recommended) or ADMIN_PASSWORD for dev
-ADMIN_PASSWORD_HASH=$2a$12$examplehash...
-# ADMIN_PASSWORD=admin
+ADMIN_PASSWORD=your_secure_password
+
+# On first start the server will print a derived ADMIN_PASSWORD_HASH.
+# Copy that hash into your .env and remove ADMIN_PASSWORD when you deploy.
 
 # Telegram Bot Token (required for Telegram notifications)
 # Get from @BotFather on Telegram

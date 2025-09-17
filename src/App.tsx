@@ -19,9 +19,13 @@ const LoginPage = lazy(() => import("./pages/LoginPage"))
 
 function App() {
   const { t } = useTranslation()
-  const { user, fetchMe } = useAuthStore()
+  const { user, fetchMe, initialized } = useAuthStore()
   useEffect(() => { fetchMe() }, [fetchMe])
+
   const RequireAuth = ({ children }: { children: JSX.Element }) => {
+    if (!initialized) {
+      return <div className="flex items-center justify-center h-64">{t('loading')}</div>
+    }
     if (!user) return <Navigate to="/login" replace />
     return children
   }

@@ -3,20 +3,13 @@ const bcrypt = require('bcryptjs');
 
 const router = express.Router();
 
-// Simple single-account auth using env vars
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || '';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const { getAdminCredentials } = require('../config/authCredentials');
+
+// Resolve admin credentials once; module exits on missing config
+const { username: ADMIN_USERNAME, passwordHash: ADMIN_PASSWORD_HASH } = getAdminCredentials();
 
 async function verifyPassword(plain, hash) {
-    if (hash) {
-        return bcrypt.compare(plain, hash);
-    }
-    // Fallback for dev: allow ADMIN_PASSWORD in plain text if no hash is provided
-    if (ADMIN_PASSWORD) {
-        return plain === ADMIN_PASSWORD;
-    }
-    return false;
+    return bcrypt.compare(plain, hash);
 }
 
 router.post('/login', async (req, res) => {
@@ -61,4 +54,3 @@ router.get('/me', (req, res) => {
 });
 
 module.exports = router;
-

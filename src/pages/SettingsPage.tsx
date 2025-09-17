@@ -202,19 +202,6 @@ export function SettingsPage() {
                 {t('exportImportDesc')}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* API key UI removed since auth is session-based */}
-            </CardContent>
-            <CardFooter className="hidden" />
-          </Card>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>{t('dataManagement')}</CardTitle>
-              <CardDescription>
-                {t('exportImportDesc')}
-              </CardDescription>
-            </CardHeader>
             <CardContent className="flex gap-4">
               <Button variant="outline" onClick={handleExportData}>
                 <Download className="mr-2 h-4 w-4" />
