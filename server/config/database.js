@@ -53,7 +53,16 @@ function initializeDatabase() {
 
             console.log('✅ Database initialized successfully via migrations!');
         } else {
-            console.log('✅ Database tables already exist, skipping initialization.');
+            console.log('📋 Database tables already exist, checking for pending migrations...');
+
+            const DatabaseMigrations = require('../db/migrations');
+            const migrations = new DatabaseMigrations(config.getDatabasePath());
+
+            migrations.initMigrationsTable();
+            migrations.runMigrations();
+            migrations.close();
+
+            console.log('✅ Database schema is up to date!');
         }
 
         return db;
