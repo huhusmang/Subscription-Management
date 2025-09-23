@@ -21,6 +21,11 @@ class DatabaseMigrations {
         version: 3,
         name: 'add_hkd_currency_support',
         up: () => this.migration_003_add_hkd_currency_support()
+      },
+      {
+        version: 4,
+        name: 'add_email_notification_support',
+        up: () => this.migration_004_add_email_notification_support()
       }
     ];
   }
@@ -160,10 +165,24 @@ class DatabaseMigrations {
         is_enabled BOOLEAN NOT NULL DEFAULT 1,
         advance_days INTEGER DEFAULT 7,
         repeat_notification BOOLEAN NOT NULL DEFAULT 0,
+        notification_channels TEXT NOT NULL DEFAULT '["telegram"]',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Ensure legacy installations gain notification_channels column
+    try {
+      this.db.exec(`
+        ALTER TABLE notification_settings
+        ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
+      `);
+    } catch (error) {
+      // Column might already exist
+      if (!/duplicate column name/i.test(error.message)) {
+        console.log('⚠️  Unable to add notification_channels column:', error.message);
+      }
+    }
 
     // Create notification_channels table
     this.db.exec(`
@@ -257,12 +276,12 @@ class DatabaseMigrations {
     console.log('📝 Inserting default settings...');
     this.db.exec(`
       -- Insert default notification settings
-      INSERT OR IGNORE INTO notification_settings (notification_type, is_enabled, advance_days, repeat_notification) VALUES
-      ('renewal_reminder', 1, 7, 1),
-      ('expiration_warning', 1, 0, 0),
-      ('renewal_success', 1, 0, 0),
-      ('renewal_failure', 1, 0, 0),
-      ('subscription_change', 1, 0, 0);
+      INSERT OR IGNORE INTO notification_settings (notification_type, is_enabled, advance_days, repeat_notification, notification_channels) VALUES
+      ('renewal_reminder', 1, 7, 1, '["telegram"]'),
+      ('expiration_warning', 1, 0, 0, '["telegram"]'),
+      ('renewal_success', 1, 0, 0, '["telegram"]'),
+      ('renewal_failure', 1, 0, 0, '["telegram"]'),
+      ('subscription_change', 1, 0, 0, '["telegram"]');
 
       -- Insert default scheduler settings
       INSERT OR IGNORE INTO scheduler_settings (id, notification_check_time, timezone, is_enabled)
@@ -293,6 +312,36 @@ class DatabaseMigrations {
     }
 
     console.log('✅ HKD currency support added successfully');
+  }
+
+  // Migration 004: Ensure email channel support columns/data exist
+  migration_004_add_email_notification_support() {
+    console.log('📝 Ensuring notification settings support email channel...');
+
+    try {
+      const columns = this.db.prepare(`PRAGMA table_info(notification_settings)`).all();
+      const hasNotificationChannels = columns.some((column) => column.name === 'notification_channels');
+
+      if (!hasNotificationChannels) {
+        this.db.exec(`
+          ALTER TABLE notification_settings
+          ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
+        `);
+        console.log('✅ Added notification_channels column to notification_settings');
+      }
+
+      // Backfill NULL values just in case
+      this.db.exec(`
+        UPDATE notification_settings
+        SET notification_channels = '["telegram"]'
+        WHERE notification_channels IS NULL OR notification_channels = ''
+      `);
+
+      console.log('✅ Notification settings ready for email channels');
+    } catch (error) {
+      console.error('❌ Failed to update notification settings for email support:', error);
+      throw error;
+    }
   }
 
   // Helper method to parse SQL statements properly

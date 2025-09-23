@@ -8,7 +8,7 @@
   - renewal_success（续订成功）
   - renewal_failure（续订失败）
   - subscription_change（订阅变更）
-- 支持的渠道：telegram（已实现）、email（占位/预留）
+- 支持的渠道：telegram、email（SMTP）
 - 多语言：zh-CN、en（根据用户偏好语言渲染模板）
 
 ### 架构与主要组件
@@ -22,16 +22,22 @@
     - 渲染模板（renderMessageTemplate）
     - 记录历史（createNotificationRecord）
   - TelegramService（server/services/telegramService.js）：调用 Telegram Bot API 发送消息
+  - EmailService（server/services/emailService.js）：封装 nodemailer 基于 SMTP 的邮件发送
   - NotificationScheduler（server/services/notificationScheduler.js）：基于 cron 的定时检查与发送
 - 控制器与路由
   - NotificationController（server/controllers/notificationController.js）：通知设置、渠道配置、发送/测试、历史、统计、Telegram 工具接口
   - 路由注册（server/routes/notifications.js、server/routes/scheduler.js；在 server/server.js 中挂载 /api 与 /api/protected）
 - 前端（部分）
   - src/services/notificationApi.ts：通知相关 API 客户端
-  - src/components/notification/*：通知设置 UI（TelegramConfig、NotificationRules、SchedulerSettings 等）
+  - src/components/notification/*：通知设置 UI（TelegramConfig、EmailConfig、NotificationRules、SchedulerSettings 等）
 
 ### 环境变量与运行前置
 - TELEGRAM_BOT_TOKEN：Telegram Bot Token
+- EMAIL_HOST / EMAIL_PORT / EMAIL_SECURE：SMTP 主机、端口、是否使用 TLS（465 常为 true）
+- EMAIL_USER / EMAIL_PASSWORD：SMTP 认证凭据
+- EMAIL_FROM：默认发件人（例如 `Subscription Manager <no-reply@example.com>`）
+- EMAIL_TLS_REJECT_UNAUTHORIZED：是否校验证书，默认 true
+- EMAIL_LOCALE：邮件测试消息的本地化（默认 zh-CN）
 - NOTIFICATION_DEFAULT_CHANNELS（可选，JSON 字符串，默认 ["telegram"]）
 - NOTIFICATION_DEFAULT_LANGUAGE（可选，默认 zh-CN）
 
@@ -68,7 +74,7 @@
 
 ### 模板与多语言
 - 模板位于 server/config/notificationTemplates.js，按通知类型/语言/渠道组织。
-- 未命中模板时，后备为 NotificationService.getDefaultMessage 生成的简短文本。
+- 未命中模板时，后备为 NotificationService.getDefaultContent 生成的简短文本。
 - 模板变量示例：name、plan、amount、currency、payment_method、next_billing_date、billing_cycle 等。
 
 可用的模板辅助接口（只读）：
@@ -198,4 +204,3 @@
 - server/controllers/notificationController.js
 - server/routes/notifications.js、server/routes/scheduler.js、server/server.js
 - src/services/notificationApi.ts、src/components/notification/*
-

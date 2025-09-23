@@ -9,7 +9,7 @@ export interface NotificationChannelConfig {
     lastValidated?: string;
   };
   email?: {
-    address: string;
+    email: string;
     validated?: boolean;
     lastValidated?: string;
   };
@@ -22,7 +22,7 @@ interface NotificationConfigState {
   
   // 操作方法
   setTelegramConfig: (config: { chat_id: string; validated?: boolean }) => void;
-  setEmailConfig: (config: { address: string; validated?: boolean }) => void;
+  setEmailConfig: (config: { email: string; validated?: boolean }) => void;
   clearChannelConfig: (channel: 'telegram' | 'email') => void;
   clearAllConfigs: () => void;
   
@@ -59,7 +59,7 @@ export const useNotificationStore = create<NotificationConfigState>()(
             ...state.channelConfigs,
             email: {
               ...state.channelConfigs.email,
-              address: config.address,
+              email: config.email,
               validated: config.validated ?? state.channelConfigs.email?.validated,
               lastValidated: config.validated ? new Date().toISOString() : state.channelConfigs.email?.lastValidated,
             },

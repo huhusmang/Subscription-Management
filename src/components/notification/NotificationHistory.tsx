@@ -227,7 +227,7 @@ export const NotificationHistory: React.FC = () => {
   // Define all possible filter options
   const allStatuses = ['sent', 'failed'];
   const allTypes = ['renewal_reminder', 'expiration_warning', 'renewal_success', 'renewal_failure', 'subscription_change'];
-  const allChannels = ['telegram'];
+  const allChannels = ['telegram', 'email'];
   
   // Get unique values from current data for information purposes
 

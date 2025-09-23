@@ -43,7 +43,7 @@ export const NotificationRules: React.FC<NotificationRulesProps> = ({
   };
 
   const renderChannelBadges = (setting: NotificationSetting) => {
-    const availableChannels = ['telegram'];
+    const availableChannels = ['telegram', 'email'];
     
     return (
       <div className="flex gap-2 flex-wrap">

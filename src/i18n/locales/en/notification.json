@@ -5,6 +5,7 @@
   "notificationRules": "Notification Rules",
   "notificationHistory": "Notification History",
   "telegram": "Telegram",
+  "email": "Email",
 
   "chatId": "Chat ID",
   "chatIdHelp": "1. Search for @userinfobot in Telegram\n2. Send any message to get your Chat ID",
@@ -31,7 +32,8 @@
   "repeatNotificationDescription": "Send daily reminders during advance period",
   "channelsLabel": "Channels",
   "channels": {
-    "telegram": "Telegram"
+    "telegram": "Telegram",
+    "email": "Email"
   },
   "sendTest": "Send Test Message",
   "settingsUpdated": "Settings updated",
@@ -152,10 +154,19 @@
   "errors": {
     "telegramNotConfigured": "Telegram bot not configured",
     "invalidChatId": "Invalid Chat ID",
+    "invalidEmail": "Invalid email address",
     "channelNotActive": "Channel not active",
     "notificationDisabled": "Notification type disabled",
     "subscriptionNotFound": "Subscription not found",
     "sendFailed": "Send failed",
     "configSaveFailed": "Failed to save configuration"
+  },
+  "emailConfig": {
+    "address": "Recipient Email",
+    "help": "The system will send notifications to this email address. Make sure the SMTP service is configured via environment variables before enabling email notifications.",
+    "saved": "Email channel saved",
+    "saveError": "Failed to save email configuration",
+    "active": "Email channel is active",
+    "valid": "Email address looks good"
   }
 }

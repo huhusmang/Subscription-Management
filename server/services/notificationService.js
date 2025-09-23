@@ -1,7 +1,8 @@
 const TelegramService = require('./telegramService');
+const EmailService = require('./emailService');
 const { createDatabaseConnection } = require('../config/database');
 const UserPreferenceService = require('./userPreferenceService');
-const { getTemplate, getSupportedLanguages } = require('../config/notificationTemplates');
+const { getTemplate } = require('../config/notificationTemplates');
 const {
   SUPPORTED_NOTIFICATION_TYPES,
   SUPPORTED_CHANNELS,
@@ -12,6 +13,7 @@ class NotificationService {
     constructor(db = null) {
         this.db = db || createDatabaseConnection();
         this.telegramService = new TelegramService();
+        this.emailService = new EmailService();
         this.userPreferenceService = new UserPreferenceService(this.db);
     }
 
@@ -90,7 +92,7 @@ class NotificationService {
             const userLanguage = this.userPreferenceService.getUserLanguage();
 
             // 渲染消息模板
-            const messageContent = this.renderMessageTemplate({
+            const { content: messageContent, subject } = this.renderMessageTemplate({
                 subscription,
                 notificationType,
                 channel,
@@ -108,6 +110,15 @@ class NotificationService {
                         recipient,
                         messageContent
                     );
+                    break;
+                case 'email':
+                    sendResult = await this.sendEmailNotification({
+                        recipient,
+                        subscription,
+                        notificationType,
+                        subject,
+                        htmlContent: messageContent
+                    });
                     break;
                 default:
                     sendResult = { success: false, error: `Unsupported channel: ${channel}` };
@@ -236,7 +247,10 @@ class NotificationService {
             // 获取模板
             const template = this.getTemplate(notificationType, language, channel);
             if (!template) {
-                return this.getDefaultMessage(subscription, notificationType);
+                return {
+                    content: this.getDefaultContent(subscription, notificationType, language),
+                    subject: this.getDefaultSubject(subscription, notificationType, language)
+                };
             }
 
             // 准备模板数据
@@ -252,16 +266,27 @@ class NotificationService {
             };
 
             // 简单的模板替换
-            let content = template.content_template;
-            Object.keys(templateData).forEach(key => {
-                const regex = new RegExp(`{{${key}}}`, 'g');
-                content = content.replace(regex, templateData[key]);
-            });
+            const replacePlaceholders = (input) => {
+                if (!input) return input;
+                let output = input;
+                Object.keys(templateData).forEach(key => {
+                    const regex = new RegExp(`{{${key}}}`, 'g');
+                    output = output.replace(regex, templateData[key] ?? '');
+                });
+                return output;
+            };
 
-            return content;
+            const content = replacePlaceholders(template.content_template);
+            const subject = replacePlaceholders(template.subject_template) ||
+                this.getDefaultSubject(subscription, notificationType, language);
+
+            return { content, subject };
         } catch (error) {
             console.error('Error rendering template:', error);
-            return this.getDefaultMessage(subscription, notificationType);
+            return {
+                content: this.getDefaultContent(subscription, notificationType, language),
+                subject: this.getDefaultSubject(subscription, notificationType, language)
+            };
         }
     }
 
@@ -283,12 +308,12 @@ class NotificationService {
     }
 
     /**
-     * 获取默认消息
+     * 获取默认消息内容
      * @param {Object} subscription - 订阅信息
      * @param {string} notificationType - 通知类型
      * @returns {string} 默认消息
      */
-    getDefaultMessage(subscription, notificationType) {
+    getDefaultContent(subscription, notificationType, language = 'zh-CN') {
         const typeMessages = {
             renewal_reminder: `续订提醒: ${subscription.name} 将在 ${this.formatDate(subscription.next_billing_date)} 到期，金额: ${subscription.amount} ${subscription.currency}`,
             expiration_warning: `过期警告: ${subscription.name} 已在 ${this.formatDate(subscription.next_billing_date)} 过期`,
@@ -297,7 +322,34 @@ class NotificationService {
             subscription_change: `订阅变更: ${subscription.name} 信息已更新`
         };
 
-        return typeMessages[notificationType] || `订阅通知: ${subscription.name}`;
+        const fallback = typeMessages[notificationType] || `订阅通知: ${subscription.name}`;
+        if (language.startsWith('en')) {
+            const englishFallbacks = {
+                renewal_reminder: `Renewal reminder: ${subscription.name} will renew on ${this.formatDate(subscription.next_billing_date, 'en-US')}, amount: ${subscription.amount} ${subscription.currency}`,
+                expiration_warning: `Expiration warning: ${subscription.name} expired on ${this.formatDate(subscription.next_billing_date, 'en-US')}`,
+                renewal_success: `Renewal success: ${subscription.name} renewed successfully, amount: ${subscription.amount} ${subscription.currency}`,
+                renewal_failure: `Renewal failure: ${subscription.name} renewal failed, amount: ${subscription.amount} ${subscription.currency}`,
+                subscription_change: `Subscription change: ${subscription.name} has been updated`
+            };
+            return englishFallbacks[notificationType] || `Subscription notification: ${subscription.name}`;
+        }
+
+        return fallback;
+    }
+
+    /**
+     * 获取默认邮件主题
+     */
+    getDefaultSubject(subscription, notificationType, language = 'zh-CN') {
+        const subjects = {
+            renewal_reminder: language.startsWith('en') ? `Renewal Reminder - ${subscription.name}` : `续订提醒 - ${subscription.name}`,
+            expiration_warning: language.startsWith('en') ? `Subscription Expired - ${subscription.name}` : `订阅已过期 - ${subscription.name}`,
+            renewal_success: language.startsWith('en') ? `Renewal Successful - ${subscription.name}` : `续订成功 - ${subscription.name}`,
+            renewal_failure: language.startsWith('en') ? `Renewal Failed - ${subscription.name}` : `续订失败 - ${subscription.name}`,
+            subscription_change: language.startsWith('en') ? `Subscription Updated - ${subscription.name}` : `订阅变更通知 - ${subscription.name}`
+        };
+
+        return subjects[notificationType] || (language.startsWith('en') ? `Subscription Notification - ${subscription.name}` : `订阅通知 - ${subscription.name}`);
     }
 
     /**
@@ -362,8 +414,16 @@ class NotificationService {
      * @returns {string} 接收者信息
      */
     getRecipient(channelConfig) {
-        if (channelConfig.config && channelConfig.config.chat_id) {
-            return channelConfig.config.chat_id;
+        if (channelConfig.config) {
+            if (channelConfig.config.chat_id) {
+                return channelConfig.config.chat_id;
+            }
+            if (channelConfig.config.email) {
+                return channelConfig.config.email;
+            }
+            if (channelConfig.config.address) {
+                return channelConfig.config.address;
+            }
         }
         return channelConfig.channel_config; // 兼容旧格式
     }
@@ -446,11 +506,52 @@ class NotificationService {
                 return await this.telegramService.sendTestMessage(chatId);
             }
 
+            if (channelType === 'email') {
+                const address = this.getRecipient(channelConfig);
+                return await this.emailService.sendTestMail(address);
+            }
+
             return { success: false, message: 'Unsupported channel type' };
         } catch (error) {
             console.error('Error testing notification:', error);
             return { success: false, error: error.message };
         }
+    }
+
+    /**
+     * 邮件发送实现
+     */
+    async sendEmailNotification({ recipient, subscription, notificationType, subject, htmlContent }) {
+        if (!this.emailService.isConfigured()) {
+            return { success: false, error: 'Email service not configured' };
+        }
+
+        const fallbackSubject = this.getDefaultSubject(subscription, notificationType);
+        const finalSubject = subject || fallbackSubject;
+        const plainText = this.stripHtml(htmlContent);
+
+        const htmlBody = /<[^>]+>/.test(htmlContent) ? htmlContent : `<p>${htmlContent}</p>`;
+
+        return this.emailService.sendMail({
+            to: recipient,
+            subject: finalSubject,
+            html: htmlBody,
+            text: plainText
+        });
+    }
+
+    /**
+     * 简单的 HTML 转纯文本
+     */
+    stripHtml(html) {
+        if (!html) return '';
+        return html
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<p[^>]*>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
     }
 
     /**

@@ -5,6 +5,7 @@
   "notificationRules": "通知规则",
   "notificationHistory": "通知历史",
   "telegram": "Telegram",
+  "email": "邮件",
 
   "chatId": "Chat ID",
   "chatIdHelp": "1. 在Telegram中搜索 @userinfobot\n2. 发送任意消息获取您的Chat ID",
@@ -31,7 +32,8 @@
   "repeatNotificationDescription": "在提前期内每天发送提醒",
   "channelsLabel": "渠道",
   "channels": {
-    "telegram": "Telegram"
+    "telegram": "Telegram",
+    "email": "邮件"
   },
   "sendTest": "发送测试消息",
   "settingsUpdated": "设置已更新",
@@ -152,10 +154,19 @@
   "errors": {
     "telegramNotConfigured": "Telegram机器人未配置",
     "invalidChatId": "无效的Chat ID",
+    "invalidEmail": "邮箱地址无效",
     "channelNotActive": "渠道未激活",
     "notificationDisabled": "通知类型已禁用",
     "subscriptionNotFound": "订阅未找到",
     "sendFailed": "发送失败",
     "configSaveFailed": "配置保存失败"
+  },
+  "emailConfig": {
+    "address": "收件邮箱",
+    "help": "系统会将通知发送到此邮箱。在启用邮件通知前，请先在环境变量中配置 SMTP 服务。",
+    "saved": "邮件渠道配置已保存",
+    "saveError": "保存邮件配置失败",
+    "active": "邮件渠道已启用",
+    "valid": "邮箱地址有效"
   }
 }

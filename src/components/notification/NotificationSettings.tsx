@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { notificationApi, NotificationSetting } from '@/services/notificationApi';
 import { useToast } from '@/hooks/use-toast';
 import { TelegramConfig } from './TelegramConfig';
+import { EmailConfig } from './EmailConfig';
 import { NotificationRules } from './NotificationRules';
 import { SchedulerSettings } from './SchedulerSettings';
 
@@ -108,10 +109,15 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({ user
         </TabsList>
 
         <TabsContent value="channels" className="space-y-6">
-          <TelegramConfig 
-            userId={userId}
-            onConfigChange={loadSettings}
-          />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <TelegramConfig 
+              userId={userId}
+              onConfigChange={loadSettings}
+            />
+            <EmailConfig 
+              onConfigChange={loadSettings}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="rules" className="space-y-6">

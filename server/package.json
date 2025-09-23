@@ -17,6 +17,7 @@
   "description": "",
   "dependencies": {
     "axios": "^1.11.0",
+    "nodemailer": "^6.9.15",
     "better-sqlite3": "^12.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

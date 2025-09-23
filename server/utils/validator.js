@@ -416,9 +416,10 @@ function validateChannelConfig(data) {
                 'Telegram chat_id must be a valid number string'
             );
     } else if (data.channel_type === 'email' && data.config) {
+        const emailAddress = data.config.email || data.config.address;
         validator
-            .required(data.config.email, 'config.email')
-            .email(data.config.email, 'config.email');
+            .required(emailAddress, 'config.email')
+            .email(emailAddress, 'config.email');
     } else if (data.channel_type === 'webhook' && data.config) {
         validator
             .required(data.config.url, 'config.url')

@@ -160,7 +160,8 @@ class Config {
             baseCurrency: this.getBaseCurrency(),
             hasApiKey: false,
             hasTianApiKey: !!this.getTianApiKey(),
-            databaseExists: this.databaseExists()
+            databaseExists: this.databaseExists(),
+            emailConfigured: this.getEmailConfig().enabled
         };
     }
 
@@ -177,7 +178,40 @@ class Config {
         console.log(`   Base Currency: ${summary.baseCurrency}`);
         console.log(`   API Key: ❌ Removed (session-based auth)`);
         console.log(`   TianAPI Key: ${summary.hasTianApiKey ? '✅ Set' : '❌ Not set'}`);
+        console.log(`   Email Notifications: ${summary.emailConfigured ? '✅ Enabled' : '❌ Disabled'}`);
         console.log(`   Database Exists: ${summary.databaseExists ? '✅ Yes' : '❌ No'}`);
+    }
+
+    /**
+     * 获取邮件通知配置
+     * @returns {Object} 邮件配置
+     */
+    getEmailConfig() {
+        const host = process.env.EMAIL_HOST;
+        const port = parseInt(process.env.EMAIL_PORT, 10) || 587;
+        const secureEnv = process.env.EMAIL_SECURE;
+        const secure = secureEnv !== undefined ? secureEnv === 'true' : port === 465;
+        const authUser = process.env.EMAIL_USER || process.env.EMAIL_USERNAME;
+        const authPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+        const from = process.env.EMAIL_FROM || authUser || 'no-reply@example.com';
+        const rejectUnauthorizedEnv = process.env.EMAIL_TLS_REJECT_UNAUTHORIZED;
+        const rejectUnauthorized = rejectUnauthorizedEnv === undefined ? true : rejectUnauthorizedEnv === 'true';
+
+        const enabled = Boolean(host && from && (authUser ? authPass : true));
+
+        return {
+            enabled,
+            host,
+            port,
+            secure,
+            from,
+            authUser,
+            authPass,
+            tlsOptions: {
+                rejectUnauthorized
+            },
+            locale: process.env.EMAIL_LOCALE || 'zh-CN'
+        };
     }
 }
 
