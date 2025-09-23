@@ -57,6 +57,8 @@ export function calculateMonthlyAmount(subscription: Subscription, targetCurrenc
       return convertedAmount / 12
     case 'quarterly':
       return convertedAmount / 3
+    case 'semiannual':
+      return convertedAmount / 6
     default:
       return convertedAmount
   }

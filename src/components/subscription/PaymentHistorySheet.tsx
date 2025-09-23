@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencySelector } from "@/components/subscription/CurrencySelector"
 import { PaymentRecord } from "@/utils/dataTransform"
-import { getBaseCurrency } from "@/config/currency"
+import { useSettingsStore } from "@/store/settingsStore"
 
 // Form data type for payment record (internal use with Date objects)
 interface PaymentFormData {
@@ -75,13 +75,14 @@ export function PaymentHistorySheet({
 }: PaymentHistorySheetProps) {
   const { t } = useTranslation(['common', 'validation'])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { currency: userCurrency } = useSettingsStore()
 
   // State for form data and validation errors
   const [form, setForm] = useState<PaymentFormData>({
     subscriptionId,
     paymentDate: new Date(),
     amountPaid: 0,
-    currency: getBaseCurrency(),
+    currency: userCurrency,
     billingPeriodStart: new Date(),
     billingPeriodEnd: new Date(),
     status: "succeeded",
@@ -109,7 +110,7 @@ export function PaymentHistorySheet({
         subscriptionId,
         paymentDate: new Date(),
         amountPaid: 0,
-        currency: getBaseCurrency(),
+        currency: userCurrency,
         billingPeriodStart: new Date(),
         billingPeriodEnd: new Date(),
         status: "succeeded",
@@ -117,7 +118,7 @@ export function PaymentHistorySheet({
       })
     }
     setErrors({})
-  }, [initialData, subscriptionId, open])
+  }, [initialData, subscriptionId, open, userCurrency])
 
   // Validation function
   const validateForm = (): boolean => {

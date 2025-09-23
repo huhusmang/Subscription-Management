@@ -49,6 +49,9 @@ const calculateLastBillingDate = (nextBillingDate: string, billingCycle: Billing
     case 'quarterly':
       nextDate.setMonth(nextDate.getMonth() - 3)
       break
+    case 'semiannual':
+      nextDate.setMonth(nextDate.getMonth() - 6)
+      break
   }
   return nextDate.toISOString().split('T')[0]
 }
@@ -99,7 +102,7 @@ export const transformToApi = (sub: Partial<Subscription>) => {
 }
 
 export type SubscriptionStatus = 'active' | 'trial' | 'cancelled'
-export type BillingCycle = 'monthly' | 'yearly' | 'quarterly'
+export type BillingCycle = 'monthly' | 'yearly' | 'quarterly' | 'semiannual'
 export type RenewalType = 'auto' | 'manual'
 // Updated to allow custom categories
 export type SubscriptionCategory = 'video' | 'music' | 'software' | 'cloud' | 'news' | 'game' | 'other' | string
@@ -113,7 +116,7 @@ const validateStatus = (status: string): SubscriptionStatus => {
 }
 
 const validateBillingCycle = (billingCycle: string): BillingCycle => {
-  if (billingCycle === 'monthly' || billingCycle === 'yearly' || billingCycle === 'quarterly') {
+  if (billingCycle === 'monthly' || billingCycle === 'yearly' || billingCycle === 'quarterly' || billingCycle === 'semiannual') {
     return billingCycle as BillingCycle
   }
   return 'monthly' // default fallback
@@ -533,6 +536,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
                 return total + (convertedAmount / 12);
               case 'quarterly':
                 return total + (convertedAmount / 3);
+              case 'semiannual':
+                return total + (convertedAmount / 6);
               default:
                 return total;
             }
@@ -557,6 +562,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
                 return total + convertedAmount;
               case 'quarterly':
                 return total + (convertedAmount * 4);
+              case 'semiannual':
+                return total + (convertedAmount * 2);
               default:
                 return total;
             }
@@ -631,6 +638,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
                   return total + convertedAmount;
                 case 'quarterly':
                   return total + (convertedAmount * 4);
+                case 'semiannual':
+                  return total + (convertedAmount * 2);
                 default:
                   return total;
               }

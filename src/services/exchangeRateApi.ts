@@ -21,6 +21,7 @@ export interface ExchangeRateConfigStatus {
   tianApiConfigured: boolean;
   provider: string;
   updateFrequency: string;
+  baseCurrency?: string;
 }
 
 /**
@@ -92,18 +93,35 @@ export class ExchangeRateApi {
    */
   static ratesToMap(rates: ExchangeRate[]): Record<string, number> {
     const rateMap: Record<string, number> = {};
-    const baseCurrency = getBaseCurrency();
 
+    if (!rates || rates.length === 0) {
+      // Fallback to frontend base currency with self rate
+      rateMap[getBaseCurrency()] = 1;
+      return rateMap;
+    }
+
+    // Prefer the entry that represents base -> base with rate 1
+    const selfRate = rates.find(r => r.from_currency === r.to_currency && Math.abs(r.rate - 1) < 1e-9);
+    let serverBase = selfRate?.from_currency;
+
+    // If not present, infer the most common from_currency; fallback to first
+    if (!serverBase) {
+      const countMap = new Map<string, number>();
+      for (const r of rates) {
+        countMap.set(r.from_currency, (countMap.get(r.from_currency) || 0) + 1);
+      }
+      serverBase = Array.from(countMap.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || rates[0].from_currency;
+    }
+
+    // Build mapping from the server-declared base currency
     for (const rate of rates) {
-      // 使用 from_currency 作为键，rate 作为值
-      // 这样可以直接查找从基础货币到其他货币的汇率
-      if (rate.from_currency === baseCurrency) {
+      if (rate.from_currency === serverBase) {
         rateMap[rate.to_currency] = rate.rate;
       }
     }
 
-    // 确保基础货币到自身的汇率为 1
-    rateMap[baseCurrency] = 1;
+    // Ensure base currency self rate exists
+    rateMap[serverBase] = 1;
 
     return rateMap;
   }

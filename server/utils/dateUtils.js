@@ -9,6 +9,10 @@ function calculateLastBillingDate(nextBillingDate, startDate, billingCycle) {
             lastBillingDate = new Date(nextDate);
             lastBillingDate.setMonth(lastBillingDate.getMonth() - 1);
             break;
+        case 'semiannual':
+            lastBillingDate = new Date(nextDate);
+            lastBillingDate.setMonth(lastBillingDate.getMonth() - 6);
+            break;
         case 'yearly':
             lastBillingDate = new Date(nextDate);
             lastBillingDate.setFullYear(lastBillingDate.getFullYear() - 1);
@@ -38,6 +42,10 @@ function calculateNextBillingDate(currentDate, billingCycle) {
         case 'monthly':
             nextBillingDate = new Date(baseDate);
             nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+            break;
+        case 'semiannual':
+            nextBillingDate = new Date(baseDate);
+            nextBillingDate.setMonth(nextBillingDate.getMonth() + 6);
             break;
         case 'yearly':
             nextBillingDate = new Date(baseDate);
@@ -84,6 +92,9 @@ function calculateNextBillingDateFromStart(startDate, currentDate, billingCycle)
         switch (billingCycle) {
             case 'monthly':
                 nextBilling.setMonth(nextBilling.getMonth() + 1);
+                break;
+            case 'semiannual':
+                nextBilling.setMonth(nextBilling.getMonth() + 6);
                 break;
             case 'yearly':
                 nextBilling.setFullYear(nextBilling.getFullYear() + 1);

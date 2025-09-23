@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { verify } = require('crypto');
 
 class DatabaseMigrations {
   constructor(dbPath) {
@@ -24,8 +25,18 @@ class DatabaseMigrations {
       },
       {
         version: 4,
+        name: 'add_semiannual_billing_cycle',
+        up: () => this.migration_004_add_semiannual_billing_cycle()
+      },
+      {
+        version: 5,
+        name: 'fix_fk_after_billing_cycle_migration',
+        up: () => this.migration_005_fix_fk_after_billing_cycle_migration()
+      },
+      {
+        version: 6,
         name: 'add_email_notification_support',
-        up: () => this.migration_004_add_email_notification_support()
+        up: () => this.migration_006_add_email_notification_support()
       }
     ];
   }
@@ -314,35 +325,244 @@ class DatabaseMigrations {
     console.log('✅ HKD currency support added successfully');
   }
 
-  // Migration 004: Ensure email channel support columns/data exist
-  migration_004_add_email_notification_support() {
-    console.log('📝 Ensuring notification settings support email channel...');
+  // Migration 004: Add 'semiannual' to subscriptions.billing_cycle CHECK constraint
+  migration_004_add_semiannual_billing_cycle() {
+    console.log("📝 Updating subscriptions.billing_cycle to include 'semiannual'...");
 
-    try {
-      const columns = this.db.prepare(`PRAGMA table_info(notification_settings)`).all();
-      const hasNotificationChannels = columns.some((column) => column.name === 'notification_channels');
+    // Ensure foreign keys are enforced during migration
+    this.db.pragma('foreign_keys = ON');
 
-      if (!hasNotificationChannels) {
-        this.db.exec(`
-          ALTER TABLE notification_settings
-          ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
-        `);
-        console.log('✅ Added notification_channels column to notification_settings');
-      }
+    // 1) Rename existing table
+    this.db.exec(`
+      ALTER TABLE subscriptions RENAME TO subscriptions_old;
+    `);
 
-      // Backfill NULL values just in case
+    // 2) Recreate subscriptions table with updated CHECK constraint
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly', 'quarterly', 'semiannual')),
+        next_billing_date DATE,
+        last_billing_date DATE,
+        amount DECIMAL(10, 2) NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'CNY',
+        payment_method_id INTEGER NOT NULL,
+        start_date DATE,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trial', 'cancelled')),
+        category_id INTEGER NOT NULL,
+        renewal_type TEXT NOT NULL DEFAULT 'manual' CHECK (renewal_type IN ('auto', 'manual')),
+        notes TEXT,
+        website TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT,
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE RESTRICT
+      );
+    `);
+
+    // 3) Copy data
+    this.db.exec(`
+      INSERT INTO subscriptions (
+        id, name, plan, billing_cycle, next_billing_date, last_billing_date, amount, currency,
+        payment_method_id, start_date, status, category_id, renewal_type, notes, website,
+        created_at, updated_at
+      )
+      SELECT
+        id, name, plan, billing_cycle, next_billing_date, last_billing_date, amount, currency,
+        payment_method_id, start_date, status, category_id, renewal_type, notes, website,
+        created_at, updated_at
+      FROM subscriptions_old;
+    `);
+
+    // 4) Recreate indexes
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_category_id ON subscriptions(category_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_payment_method_id ON subscriptions(payment_method_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing_date ON subscriptions(next_billing_date);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_cycle ON subscriptions(billing_cycle);
+    `);
+
+    // 5) Recreate update trigger
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS subscriptions_updated_at
+      AFTER UPDATE ON subscriptions
+      FOR EACH ROW
+      BEGIN
+          UPDATE subscriptions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+      END;
+    `);
+
+    // 6) Drop old table
+    this.db.exec(`
+      DROP TABLE IF EXISTS subscriptions_old;
+    `);
+
+    console.log("✅ Updated subscriptions.billing_cycle to include 'semiannual'");
+  }
+
+  // Migration 005: After migration 004, SQLite renaming updated FKs in child tables
+  // to reference `subscriptions_old`. Recreate affected tables so their FKs
+  // correctly reference `subscriptions` again.
+  migration_005_fix_fk_after_billing_cycle_migration() {
+    console.log('🛠️  Fixing foreign keys referencing subscriptions_old...');
+
+    // Ensure foreign keys are enforced during migration
+    this.db.pragma('foreign_keys = ON');
+
+    // Check whether payment_history references subscriptions_old
+    const fkIssueRows = this.db.prepare(`
+      SELECT name, sql FROM sqlite_master 
+      WHERE type='table' 
+        AND name IN ('payment_history','notification_history')
+        AND sql LIKE '%subscriptions_old%'
+    `).all();
+
+    if (fkIssueRows.length === 0) {
+      console.log('ℹ️  No tables reference subscriptions_old. Skipping.');
+      return;
+    }
+
+    // 1) Recreate payment_history if needed
+    const paymentHistoryHasIssue = fkIssueRows.some(r => r.name === 'payment_history');
+    if (paymentHistoryHasIssue) {
+      console.log('🔄 Recreating payment_history to fix foreign key...');
+
+      // Rename old table
       this.db.exec(`
-        UPDATE notification_settings
-        SET notification_channels = '["telegram"]'
-        WHERE notification_channels IS NULL OR notification_channels = ''
+        ALTER TABLE payment_history RENAME TO payment_history_old;
       `);
 
-      console.log('✅ Notification settings ready for email channels');
-    } catch (error) {
-      console.error('❌ Failed to update notification settings for email support:', error);
-      throw error;
+      // Create new table with correct FK
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS payment_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subscription_id INTEGER NOT NULL,
+          payment_date DATE NOT NULL,
+          amount_paid DECIMAL(10, 2) NOT NULL,
+          currency TEXT NOT NULL,
+          billing_period_start DATE NOT NULL,
+          billing_period_end DATE NOT NULL,
+          status TEXT NOT NULL DEFAULT 'succeeded' CHECK (status IN ('succeeded', 'failed', 'refunded')),
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
+        );
+      `);
+
+      // Copy data
+      this.db.exec(`
+        INSERT INTO payment_history (
+          id, subscription_id, payment_date, amount_paid, currency,
+          billing_period_start, billing_period_end, status, notes, created_at
+        )
+        SELECT id, subscription_id, payment_date, amount_paid, currency,
+               billing_period_start, billing_period_end, status, notes, created_at
+        FROM payment_history_old;
+      `);
+
+      // Recreate indexes
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_payment_history_subscription_id ON payment_history(subscription_id);
+        CREATE INDEX IF NOT EXISTS idx_payment_history_payment_date ON payment_history(payment_date);
+        CREATE INDEX IF NOT EXISTS idx_payment_history_billing_period ON payment_history(billing_period_start, billing_period_end);
+      `);
+
+      // Drop old table
+      this.db.exec(`
+        DROP TABLE IF EXISTS payment_history_old;
+      `);
+
+      console.log('✅ payment_history foreign key fixed');
     }
+
+    // 2) Recreate notification_history if needed
+    const notificationHistoryHasIssue = fkIssueRows.some(r => r.name === 'notification_history');
+    if (notificationHistoryHasIssue) {
+      console.log('🔄 Recreating notification_history to fix foreign key...');
+
+      // Rename old table
+      this.db.exec(`
+        ALTER TABLE notification_history RENAME TO notification_history_old;
+      `);
+
+      // Create new table with correct FK
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS notification_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subscription_id INTEGER NOT NULL,
+          notification_type TEXT NOT NULL,
+          channel_type TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('sent', 'failed')),
+          recipient TEXT NOT NULL,
+          message_content TEXT NOT NULL,
+          error_message TEXT,
+          sent_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
+        );
+      `);
+
+      // Copy data
+      this.db.exec(`
+        INSERT INTO notification_history (
+          id, subscription_id, notification_type, channel_type, status,
+          recipient, message_content, error_message, sent_at, created_at
+        )
+        SELECT id, subscription_id, notification_type, channel_type, status,
+               recipient, message_content, error_message, sent_at, created_at
+        FROM notification_history_old;
+      `);
+
+      // Recreate indexes (same as migration 002)
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_notification_history_subscription ON notification_history(subscription_id);
+        CREATE INDEX IF NOT EXISTS idx_notification_history_status ON notification_history(status);
+        CREATE INDEX IF NOT EXISTS idx_notification_history_created ON notification_history(created_at);
+      `);
+
+      // Drop old table
+      this.db.exec(`
+        DROP TABLE IF EXISTS notification_history_old;
+      `);
+
+      console.log('✅ notification_history foreign key fixed');
+    }
+
+    console.log('🎉 Foreign key fixes completed');
   }
+
+  // Migration 006: Add email notification support
+    migration_006_add_email_notification_support() {
+      console.log('📝 Ensuring notification settings support email channel...');
+  
+      try {
+        const columns = this.db.prepare(`PRAGMA table_info(notification_settings)`).all();
+        const hasNotificationChannels = columns.some((column) => column.name === 'notification_channels');
+  
+        if (!hasNotificationChannels) {
+          this.db.exec(`
+            ALTER TABLE notification_settings
+            ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
+          `);
+          console.log('✅ Added notification_channels column to notification_settings');
+        }
+  
+        // Backfill NULL values just in case
+        this.db.exec(`
+          UPDATE notification_settings
+          SET notification_channels = '["telegram"]'
+          WHERE notification_channels IS NULL OR notification_channels = ''
+        `);
+  
+        console.log('✅ Notification settings ready for email channels');
+      } catch (error) {
+        console.error('❌ Failed to update notification settings for email support:', error);
+        throw error;
+      }
+    }
 
   // Helper method to parse SQL statements properly
   parseSQL(sql) {
