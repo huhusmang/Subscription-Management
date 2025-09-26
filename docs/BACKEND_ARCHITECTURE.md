@@ -25,6 +25,10 @@ Database Layer (数据库层)
 - **定时任务**: node-cron
 - **HTTP客户端**: axios
 - **环境配置**: dotenv
+- **会话管理**: express-session
+- **密码哈希**: bcryptjs
+- **邮件服务**: nodemailer
+- **Telegram API**: 机器人通知集成
 
 ## 📁 目录结构
 
@@ -34,16 +38,36 @@ server/
 ├── config/                 # 配置管理
 │   ├── index.js           # 配置入口
 │   ├── database.js        # 数据库配置
-│   └── currencies.js      # 货币配置
+│   ├── currencies.js      # 货币配置
+│   ├── authCredentials.js # 认证凭证管理
+│   ├── notification.js    # 通知配置
+│   └── notificationTemplates.js # 通知模板
 ├── db/                     # 数据库相关
 │   ├── schema.sql         # 数据库结构定义
 │   ├── init.js            # 数据库初始化
 │   ├── migrate.js         # 迁移执行器
 │   └── migrations.js      # 迁移定义
 ├── controllers/            # 控制器层
+│   ├── authController.js  # 认证控制器
+│   ├── notificationController.js # 通知控制器
+│   └── ...
 ├── services/              # 业务逻辑层
+│   ├── authService.js     # 认证服务
+│   ├── emailService.js    # 邮件服务
+│   ├── telegramService.js # Telegram服务
+│   ├── notificationService.js # 通知服务
+│   ├── notificationScheduler.js # 通知调度器
+│   └── ...
 ├── routes/                # 路由定义
+│   ├── auth.js            # 认证路由
+│   ├── notifications.js  # 通知路由
+│   ├── scheduler.js       # 调度器路由
+│   └── ...
 ├── middleware/            # 中间件
+│   ├── auth.js            # 认证中间件
+│   ├── session.js         # 会话中间件
+│   ├── requireLogin.js    # 登录验证中间件
+│   └── ...
 ├── utils/                 # 工具类
 └── scripts/               # 脚本文件
 ```
@@ -155,6 +179,67 @@ CREATE TABLE exchange_rates (
 );
 ```
 
+#### 8. notification_settings (通知设置表)
+```sql
+CREATE TABLE notification_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notification_type TEXT NOT NULL UNIQUE CHECK (
+        notification_type IN (
+            'renewal_reminder', 'expiration_warning',
+            'renewal_success', 'renewal_failure', 'subscription_change'
+        )
+    ),
+    is_enabled BOOLEAN NOT NULL DEFAULT 1,
+    advance_days INTEGER DEFAULT 7,
+    repeat_notification BOOLEAN NOT NULL DEFAULT 0,
+    notification_channels TEXT NOT NULL DEFAULT '["telegram"]',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 9. notification_channels (通知渠道表)
+```sql
+CREATE TABLE notification_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_type TEXT NOT NULL UNIQUE CHECK (channel_type IN ('telegram', 'email')),
+    channel_config TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    last_used_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### 10. notification_history (通知历史表)
+```sql
+CREATE TABLE notification_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subscription_id INTEGER NOT NULL,
+    notification_type TEXT NOT NULL,
+    channel_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('sent', 'failed')),
+    recipient TEXT NOT NULL,
+    message_content TEXT NOT NULL,
+    error_message TEXT,
+    sent_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
+);
+```
+
+#### 11. scheduler_settings (调度器设置表)
+```sql
+CREATE TABLE scheduler_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    notification_check_time TEXT NOT NULL DEFAULT '09:00',
+    timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+    is_enabled BOOLEAN NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### 数据库特性
 
 #### 外键约束
@@ -212,21 +297,76 @@ const getTianApiKey = () => process.env.TIANAPI_KEY;
 ```
 
 ### 环境变量
+
+#### 基础配置
 ```bash
 # 必需配置
 PORT=3001
 BASE_CURRENCY=CNY
 NODE_ENV=production
 DATABASE_PATH=/app/data/database.sqlite
+
+# 汇率API
 TIANAPI_KEY=your_tianapi_key_here
+```
+
+#### 认证配置
+```bash
+# 会话管理
 SESSION_SECRET=your_random_session_secret
+
+# 管理员认证
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_password
+ADMIN_PASSWORD=your_secure_password  # 首次启动时使用
+ADMIN_PASSWORD_HASH=$2a$12$...  # 生产环境推荐使用
 
 # 首次启动时，系统会根据 ADMIN_PASSWORD 生成 bcrypt 哈希并输出日志，便于将其转存到 ADMIN_PASSWORD_HASH 后删除明文密码。
 ```
 
+#### 通知系统配置
+```bash
+# Telegram通知
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+
+# 邮件通知
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_FROM=Subscription Manager <no-reply@example.com>
+EMAIL_TLS_REJECT_UNAUTHORIZED=true
+EMAIL_LOCALE=zh-CN
+
+# 通知默认设置
+NOTIFICATION_DEFAULT_CHANNELS=["telegram"]
+NOTIFICATION_DEFAULT_LANGUAGE=zh-CN
+```
+
 ## 🛡 中间件系统
+
+### 会话中间件 (middleware/session.js)
+```javascript
+const session = require('express-session');
+
+function configureSession(app) {
+    // 会话配置
+    const sessionConfig = {
+        name: 'sid',                    // Cookie名称
+        secret: process.env.SESSION_SECRET || 'temp_secret_key',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            maxAge: 12 * 60 * 60 * 1000, // 12小时
+            httpOnly: true,              // 防止XSS攻击
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        }
+    };
+
+    app.use(session(sessionConfig));
+}
+```
 
 ### 认证中间件 (middleware/requireLogin.js)
 ```javascript
@@ -234,7 +374,44 @@ function requireLogin(req, res, next) {
     if (req.session && req.session.user) {
         return next();
     }
-    return res.status(401).json({ message: 'Authentication required' });
+    return res.status(401).json({ error: 'Authentication required' });
+}
+```
+
+### 认证凭证管理 (config/authCredentials.js)
+```javascript
+const bcrypt = require('bcryptjs');
+
+let cachedCredentials = null;
+
+function getAdminCredentials() {
+    if (cachedCredentials) {
+        return cachedCredentials;
+    }
+
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const configuredHash = process.env.ADMIN_PASSWORD_HASH;
+    const plainPassword = process.env.ADMIN_PASSWORD;
+
+    if (!configuredHash && !plainPassword) {
+        console.error('❌ Missing admin password configuration. Set ADMIN_PASSWORD in your environment file.');
+        process.exit(1);
+    }
+
+    let passwordHash = configuredHash;
+    if (!passwordHash && plainPassword) {
+        passwordHash = bcrypt.hashSync(plainPassword, 12);
+        console.warn('⚠️  Generated ADMIN_PASSWORD_HASH from ADMIN_PASSWORD.');
+        console.warn('   For better security, set ADMIN_PASSWORD_HASH to the value below and remove ADMIN_PASSWORD:');
+        console.warn(`   ADMIN_PASSWORD_HASH=${passwordHash}`);
+    }
+
+    cachedCredentials = {
+        username: adminUsername,
+        passwordHash
+    };
+
+    return cachedCredentials;
 }
 ```
 
@@ -248,24 +425,38 @@ const asyncHandler = (fn) => (req, res, next) => {
 // 全局错误处理器
 const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
-    
+
     // 数据库错误处理
     if (err.code === 'SQLITE_CONSTRAINT') {
-        return res.status(400).json({ 
-            error: 'Database constraint violation' 
+        return res.status(400).json({
+            error: 'Database constraint violation'
         });
     }
-    
+
+    // 认证错误处理
+    if (err.message === 'Authentication required') {
+        return res.status(401).json({
+            error: 'Authentication required'
+        });
+    }
+
+    // 会话错误处理
+    if (err.message === 'Session expired') {
+        return res.status(401).json({
+            error: 'Session expired'
+        });
+    }
+
     // 默认错误响应
-    res.status(500).json({ 
-        error: 'Internal server error' 
+    res.status(500).json({
+        error: 'Internal server error'
     });
 };
 
 // 404处理器
 const notFoundHandler = (req, res) => {
-    res.status(404).json({ 
-        error: 'Endpoint not found' 
+    res.status(404).json({
+        error: 'Endpoint not found'
     });
 };
 ```
@@ -426,6 +617,116 @@ const handleDbResult = (res, result, successMessage, notFoundMessage) => {
 ## 🔧 业务逻辑层
 
 业务逻辑层封装复杂的业务规则和数据处理逻辑。
+
+### 邮件服务 (services/emailService.js)
+```javascript
+const nodemailer = require('nodemailer');
+const config = require('../config');
+
+class EmailService {
+  constructor(options = null) {
+    this.config = options || config.getEmailConfig();
+    this.transporter = null;
+
+    if (this.config.enabled) {
+      this.transporter = nodemailer.createTransporter({
+        host: this.config.host,
+        port: this.config.port,
+        secure: this.config.secure,
+        auth: this.config.authUser
+          ? {
+              user: this.config.authUser,
+              pass: this.config.authPass
+            }
+          : undefined,
+        tls: this.config.tlsOptions
+      });
+    }
+  }
+
+  async sendMail({ to, subject, html, text }) {
+    if (!this.isConfigured()) {
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.getDefaultFrom(),
+        to,
+        subject,
+        html,
+        text
+      });
+
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Email notification failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendTestMail(to) {
+    const now = new Date().toLocaleString(this.config.locale || 'zh-CN');
+    const subject = '订阅管理系统测试邮件 / Subscription Manager Test';
+    const html = `
+      <h2>订阅管理系统测试邮件</h2>
+      <p>这是一封来自订阅管理系统的测试邮件。如果您收到此邮件，说明邮件通知渠道配置正确。</p>
+      <hr/>
+      <p><strong>Send time:</strong> ${now}</p>
+      <p>感谢您的使用！</p>
+    `;
+
+    return this.sendMail({ to, subject, html, text });
+  }
+}
+```
+
+### 通知服务 (services/notificationService.js)
+```javascript
+class NotificationService {
+  constructor(db) {
+    this.db = db;
+    this.emailService = new EmailService();
+    this.telegramService = new TelegramService();
+  }
+
+  async sendNotification(subscriptionId, notificationType, channels = null) {
+    // 获取订阅信息
+    const subscription = this.db.prepare('SELECT * FROM subscriptions WHERE id = ?').get(subscriptionId);
+
+    // 获取通知设置
+    const settings = this.db.prepare('SELECT * FROM notification_settings WHERE notification_type = ?').get(notificationType);
+
+    if (!settings || !settings.is_enabled) {
+      return { success: true, message: 'Notification disabled' };
+    }
+
+    // 确定通知渠道
+    const channelsToUse = channels || JSON.parse(settings.notification_channels);
+
+    const results = await Promise.allSettled(
+      channelsToUse.map(channel =>
+        this.sendToChannel(channel, subscription, notificationType, settings)
+      )
+    );
+
+    // 记录通知历史
+    results.forEach(result => {
+      this.createNotificationRecord({
+        subscription_id: subscriptionId,
+        notification_type: notificationType,
+        channel_type: result.status === 'fulfilled' ? result.value.channel : 'unknown',
+        status: result.status === 'fulfilled' ? (result.value.success ? 'sent' : 'failed') : 'failed',
+        recipient: result.status === 'fulfilled' ? result.value.recipient : '',
+        message_content: result.status === 'fulfilled' ? result.value.message : '',
+        error_message: result.status === 'rejected' ? result.reason.message : result.value.error
+      });
+    });
+
+    return { success: true, results };
+  }
+}
+```
 
 ### 服务类示例
 ```javascript
@@ -741,13 +1042,15 @@ const logger = {
 
 ### 应用启动序列
 1. **环境配置加载** - 读取.env文件和环境变量
-2. **数据库初始化** - 检查并创建数据库表结构
-3. **中间件配置** - 设置CORS、JSON解析等中间件
-4. **定时任务启动** - 启动汇率更新和订阅维护任务
-5. **路由注册** - 注册所有API路由
-6. **静态文件服务** - 配置前端静态文件服务
-7. **错误处理** - 设置全局错误处理中间件
-8. **服务器启动** - 监听指定端口
+2. **认证凭证初始化** - 验证并缓存管理员认证信息
+3. **数据库初始化** - 检查并创建数据库表结构，运行迁移
+4. **会话配置** - 配置express-session中间件
+5. **中间件配置** - 设置CORS、JSON解析、认证验证等中间件
+6. **定时任务启动** - 启动汇率更新、订阅维护和通知调度任务
+7. **路由注册** - 注册认证、订阅、通知等API路由
+8. **静态文件服务** - 配置前端静态文件服务
+9. **错误处理** - 设置全局错误处理中间件
+10. **服务器启动** - 监听指定端口
 
 ### 启动脚本 (start.sh)
 ```bash
@@ -772,20 +1075,29 @@ node server.js
 
 ## 🔒 安全考虑
 
-### API密钥认证
-- 所有写操作需要API密钥验证
-- 密钥通过环境变量配置
-- 支持密钥自动生成
+### 认证与会话安全
+- **基于会话的认证**: 使用express-session管理用户会话
+- **HTTP-Only Cookie**: 会话ID存储在HTTP-Only Cookie中，防止XSS攻击
+- **密码安全哈希**: 使用bcrypt对管理员密码进行安全哈希存储
+- **会话过期**: 默认12小时会话过期机制
+- **安全标志**: 生产环境启用secure和sameSite Cookie标志
 
-### 数据验证
-- 输入参数严格验证
-- SQL注入防护
-- 数据类型检查
+### 数据验证与防护
+- **输入参数严格验证**: 所有API输入都经过验证器检查
+- **SQL注入防护**: 使用参数化查询和输入清理
+- **数据类型检查**: 确保数据类型和格式正确
+- **XSS防护**: 对输出数据进行适当转义
 
-### 错误处理
-- 敏感信息不暴露给客户端
-- 统一错误响应格式
-- 详细的服务器端日志
+### 错误处理与日志
+- **敏感信息保护**: 错误响应不暴露敏感系统信息
+- **统一错误响应格式**: 所有错误使用一致的JSON格式
+- **详细服务器端日志**: 记录详细的操作和错误日志用于调试
+- **认证错误处理**: 专门处理认证和会话相关的错误
+
+### 环境安全
+- **环境变量管理**: 所有敏感配置通过环境变量管理
+- **生产环境加固**: 启用HTTPS、CSP等安全头
+- **依赖安全**: 定期更新依赖包，修复已知安全漏洞
 
 ## 📈 性能优化
 

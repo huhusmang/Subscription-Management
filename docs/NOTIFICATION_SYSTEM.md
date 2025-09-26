@@ -10,11 +10,14 @@
   - subscription_change（订阅变更）
 - 支持的渠道：telegram、email（SMTP）
 - 多语言：zh-CN、en（根据用户偏好语言渲染模板）
+- 邮件服务：基于nodemailer，支持多种SMTP提供商（Gmail、Outlook、自定义SMTP等）
+- 模板系统：支持HTML邮件模板，自定义样式和品牌化
 
 ### 架构与主要组件
 - 配置
   - server/config/notification.js：通知类型、渠道、语言、时区及默认值
   - server/config/notificationTemplates.js：多语言、多渠道模板
+  - server/config/index.js：邮件服务配置（SMTP设置、认证信息等）
 - 服务
   - NotificationService（server/services/notificationService.js）：
     - 统一发送入口（sendNotification）
@@ -23,6 +26,10 @@
     - 记录历史（createNotificationRecord）
   - TelegramService（server/services/telegramService.js）：调用 Telegram Bot API 发送消息
   - EmailService（server/services/emailService.js）：封装 nodemailer 基于 SMTP 的邮件发送
+    - SMTP配置管理
+    - HTML和纯文本邮件支持
+    - 测试邮件功能
+    - 错误处理和重试机制
   - NotificationScheduler（server/services/notificationScheduler.js）：基于 cron 的定时检查与发送
 - 控制器与路由
   - NotificationController（server/controllers/notificationController.js）：通知设置、渠道配置、发送/测试、历史、统计、Telegram 工具接口
@@ -32,45 +39,77 @@
   - src/components/notification/*：通知设置 UI（TelegramConfig、EmailConfig、NotificationRules、SchedulerSettings 等）
 
 ### 环境变量与运行前置
-- TELEGRAM_BOT_TOKEN：Telegram Bot Token
-- EMAIL_HOST / EMAIL_PORT / EMAIL_SECURE：SMTP 主机、端口、是否使用 TLS（465 常为 true）
-- EMAIL_USER / EMAIL_PASSWORD：SMTP 认证凭据
-- EMAIL_FROM：默认发件人（例如 `Subscription Manager <no-reply@example.com>`）
-- EMAIL_TLS_REJECT_UNAUTHORIZED：是否校验证书，默认 true
-- EMAIL_LOCALE：邮件测试消息的本地化（默认 zh-CN）
-- NOTIFICATION_DEFAULT_CHANNELS（可选，JSON 字符串，默认 ["telegram"]）
-- NOTIFICATION_DEFAULT_LANGUAGE（可选，默认 zh-CN）
 
-注意：受保护接口需登录后访问（会话鉴权）。
+#### Telegram通知配置
+- TELEGRAM_BOT_TOKEN：Telegram Bot Token（必需用于Telegram通知）
+
+#### 邮件通知配置
+- EMAIL_HOST：SMTP服务器主机（例如：smtp.gmail.com）
+- EMAIL_PORT：SMTP服务器端口（例如：587 for Gmail, 465 for secure）
+- EMAIL_SECURE：是否使用SSL/TLS（布尔值，Gmail通常为false）
+- EMAIL_USER：SMTP认证用户名（通常是邮箱地址）
+- EMAIL_PASSWORD：SMTP认证密码或应用专用密码
+- EMAIL_FROM：默认发件人地址（格式：`Subscription Manager <no-reply@example.com>`）
+- EMAIL_TLS_REJECT_UNAUTHORIZED：是否验证SSL证书（默认true）
+- EMAIL_LOCALE：邮件测试消息的本地化语言（默认zh-CN）
+
+#### 通知系统配置
+- NOTIFICATION_DEFAULT_CHANNELS：默认通知渠道JSON字符串（默认["telegram"]）
+- NOTIFICATION_DEFAULT_LANGUAGE：默认通知语言（默认zh-CN）
+
+#### 认证配置（用于访问受保护接口）
+- SESSION_SECRET：会话密钥（必需）
+- ADMIN_USERNAME：管理员用户名（默认admin）
+- ADMIN_PASSWORD：管理员密码（首次启动时使用）
+- ADMIN_PASSWORD_HASH：管理员密码哈希（生产环境推荐）
+
+注意：所有受保护接口均需基于会话的登录认证。邮件通知需要配置有效的SMTP服务器信息。
 
 ### 数据库结构（关键表）
-- notification_settings（每种通知类型一条，支持用户维度）
-  - id, user_id
-  - notification_type（见上方类型枚举）
-  - is_enabled（是否启用）
-  - advance_days（提前天数；expiration_warning 固定为 0）
-  - notification_channels（JSON，示例：["telegram"]）
-  - repeat_notification（是否重复提醒）
-  - created_at, updated_at
-- notification_channels（各渠道配置）
-  - id
-  - channel_type（telegram/email）
-  - channel_config（JSON，如 Telegram 的 chat_id 等）
-  - is_active, last_used_at
-  - created_at, updated_at
-- notification_history（发送历史）
-  - id, user_id, subscription_id
-  - notification_type, channel_type
-  - status（sent/failed）
-  - recipient, message_content, error_message
-  - sent_at, created_at
-- scheduler_settings（通知定时器设置）
-  - user_id（单用户系统固定为 1）
-  - notification_check_time（如 "09:00"）
-  - timezone（如 "Asia/Shanghai"）
-  - is_enabled, created_at, updated_at
 
-注：具体建表/索引可参考 server/db/migrations.js 与 .specstory 变更记录。
+#### notification_settings（通知设置表）
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
+- notification_type: TEXT NOT NULL UNIQUE（续订提醒、过期警告等）
+- is_enabled: BOOLEAN NOT NULL DEFAULT 1（是否启用）
+- advance_days: INTEGER DEFAULT 7（提前天数）
+- repeat_notification: BOOLEAN NOT NULL DEFAULT 0（是否重复提醒）
+- notification_channels: TEXT NOT NULL DEFAULT '["telegram"]'（JSON数组，支持多渠道）
+- created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+- updated_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+#### notification_channels（通知渠道配置表）
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
+- channel_type: TEXT NOT NULL UNIQUE（telegram/email）
+- channel_config: TEXT NOT NULL（JSON格式配置）
+  - Telegram: `{"chat_id": "123456789"}`
+  - Email: `{"email": "user@example.com"}`
+- is_active: BOOLEAN NOT NULL DEFAULT 1（是否激活）
+- last_used_at: DATETIME（最后使用时间）
+- created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+- updated_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+#### notification_history（通知历史表）
+- id: INTEGER PRIMARY KEY AUTOINCREMENT
+- subscription_id: INTEGER NOT NULL（关联订阅）
+- notification_type: TEXT NOT NULL（通知类型）
+- channel_type: TEXT NOT NULL（通知渠道）
+- status: TEXT NOT NULL CHECK (status IN ('sent', 'failed'))（发送状态）
+- recipient: TEXT NOT NULL（接收者标识）
+- message_content: TEXT NOT NULL（消息内容）
+- error_message: TEXT（错误信息，发送失败时记录）
+- sent_at: DATETIME（发送时间）
+- created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+- FOREIGN KEY (subscription_id) REFERENCES subscriptions (id) ON DELETE CASCADE
+
+#### scheduler_settings（调度器设置表）
+- id: INTEGER PRIMARY KEY CHECK (id = 1)
+- notification_check_time: TEXT NOT NULL DEFAULT '09:00'（检查时间 HH:mm）
+- timezone: TEXT NOT NULL DEFAULT 'Asia/Shanghai'（时区）
+- is_enabled: BOOLEAN NOT NULL DEFAULT 1（是否启用调度）
+- created_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+- updated_at: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+注：具体建表语句、索引和触发器可参考 server/db/migrations.js 文件。
 
 ### 模板与多语言
 - 模板位于 server/config/notificationTemplates.js，按通知类型/语言/渠道组织。
@@ -177,30 +216,149 @@
 - 通过 /api/protected/notifications/channels 保存 chat_id 配置
 - 使用 /api/protected/notifications/test 进行渠道连通性测试
 
+### 邮件通知配置指引
+
+#### 1. SMTP服务器配置
+在 `.env` 文件中配置以下环境变量：
+
+```bash
+# Gmail SMTP配置示例
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password  # Gmail需要应用专用密码
+EMAIL_FROM=Subscription Manager <no-reply@example.com>
+EMAIL_LOCALE=zh-CN
+
+# Outlook SMTP配置示例
+EMAIL_HOST=smtp-mail.outlook.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@outlook.com
+EMAIL_PASSWORD=your_password
+EMAIL_FROM=Subscription Manager <no-reply@outlook.com>
+```
+
+#### 2. 获取应用专用密码（Gmail）
+1. 启用Gmail的"不够安全的应用访问"或使用应用专用密码
+2. 在Google账户设置中生成应用专用密码
+3. 将生成的16位密码（不含空格）填入 EMAIL_PASSWORD
+
+#### 3. 配置邮件渠道
+```bash
+# 通过API配置邮件渠道
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -b cookie.txt -c cookie.txt \
+  -d '{"channel_type":"email","config":{"email":"your_email@example.com"}}' \
+  http://localhost:3001/api/protected/notifications/channels
+```
+
+#### 4. 测试邮件发送
+```bash
+# 发送测试邮件
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -b cookie.txt -c cookie.txt \
+  -d '{"channel_type":"email"}' \
+  http://localhost:3001/api/protected/notifications/test
+```
+
+#### 5. 邮件模板定制
+邮件使用HTML模板，包含品牌样式和格式化内容：
+- 支持响应式设计
+- 包含公司标志和品牌色彩
+- 多语言内容支持
+- 格式化的订阅信息展示
+
 ### 错误处理与排查
-- 401：未登录或会话无效
-- 400：请求参数校验失败（见控制器内 validator）
-- Telegram 发送失败常见原因：
-  - 未配置 TELEGRAM_BOT_TOKEN
+- **401：未登录或会话无效**
+  - 确保已通过 `/api/auth/login` 登录
+  - 检查会话Cookie是否有效
+  - 会话默认12小时后过期
+
+- **400：请求参数校验失败**
+  - 检查请求参数格式和必需字段
+  - 查看控制器内的validator错误详情
+
+- **Telegram 发送失败常见原因：**
+  - 未配置 TELEGRAM_BOT_TOKEN 环境变量
   - chat_id 无效或机器人未与用户/群聊建立会话
-  - 网络或 Telegram API 返回错误（记录在 notification_history.error_message）
+  - 网络连接问题或 Telegram API 临时不可用
+  - 错误信息记录在 notification_history.error_message 字段
+
+- **邮件发送失败常见原因：**
+  - SMTP配置错误（EMAIL_HOST、EMAIL_PORT、EMAIL_USER、EMAIL_PASSWORD）
+  - 网络连接问题或SMTP服务器不可用
+  - 认证失败（用户名/密码错误或应用专用密码问题）
+  - SSL/TLS配置问题（EMAIL_SECURE设置不正确）
+  - 发件人邮箱未正确验证或被限制
+  - 接收者邮箱地址无效或被标记为垃圾邮件
 
 ### 扩展与定制
-- 新增渠道：
-  - 在 NotificationService.sendToChannel 中增加渠道分支及发送实现
-  - 在配置与校验中加入新的 channel_type
-  - 为新渠道添加模板与模板变量映射
-- 自定义模板：
-  - 在 server/config/notificationTemplates.js 中增添对应类型/语言/渠道的模板
-- 多语言：
-  - 通过用户偏好（UserPreferenceService）或 NOTIFICATION_DEFAULT_LANGUAGE 控制模板语言
+
+#### 新增通知渠道
+1. **在NotificationService中添加渠道支持：**
+   - 在 `sendToChannel` 方法中增加新的渠道分支
+   - 实现具体的发送逻辑（例如：Slack、Discord、Webhook等）
+   - 添加错误处理和重试机制
+
+2. **更新配置和校验：**
+   - 在 `server/config/notification.js` 中添加新的 `channel_type`
+   - 在验证器中添加新的渠道类型校验
+   - 更新环境变量配置
+
+3. **添加模板支持：**
+   - 在 `server/config/notificationTemplates.js` 中为新渠道添加模板
+   - 支持HTML和纯文本格式
+   - 添加模板变量映射
+
+#### 邮件通知定制
+- **自定义邮件模板：** 修改 `server/config/notificationTemplates.js` 中的HTML模板
+- **品牌化：** 自定义邮件头部、颜色、标志等样式
+- **SMTP配置：** 支持自定义SMTP服务器配置
+- **批量发送：** 支持一次发送多封邮件的优化
+
+#### 自定义模板
+- 在 `server/config/notificationTemplates.js` 中增添对应类型/语言/渠道的模板
+- 支持HTML和纯文本两种格式
+- 模板变量包括：订阅信息、用户信息、格式化的金额和日期等
+
+#### 多语言支持
+- 通过用户偏好设置（UserPreferenceService）或 `NOTIFICATION_DEFAULT_LANGUAGE` 控制模板语言
+- 支持中英文切换
+- 日期、货币等本地化格式化
+
+#### 高级功能扩展
+- **邮件附件支持：** 为通知邮件添加PDF报告等附件
+- **邮件队列：** 实现异步邮件发送队列，提升性能
+- **发送统计：** 详细的邮件发送成功率和错误统计
+- **A/B测试：** 不同邮件模板的效果对比测试
 
 ### 参考文件
-- server/config/notification.js
-- server/config/notificationTemplates.js
-- server/services/notificationService.js
-- server/services/notificationScheduler.js
-- server/services/telegramService.js
-- server/controllers/notificationController.js
-- server/routes/notifications.js、server/routes/scheduler.js、server/server.js
-- src/services/notificationApi.ts、src/components/notification/*
+
+#### 后端核心文件
+- server/config/notification.js - 通知系统配置
+- server/config/notificationTemplates.js - 通知模板定义
+- server/config/index.js - 邮件服务配置
+- server/services/notificationService.js - 通知服务主类
+- server/services/notificationScheduler.js - 通知调度器
+- server/services/telegramService.js - Telegram服务
+- server/services/emailService.js - 邮件服务
+- server/controllers/notificationController.js - 通知控制器
+- server/routes/notifications.js - 通知路由
+- server/routes/scheduler.js - 调度器路由
+- server/server.js - 服务器入口和路由注册
+
+#### 前端文件
+- src/services/notificationApi.ts - 通知API客户端
+- src/components/notification/* - 通知设置UI组件
+  - EmailConfig.tsx - 邮件配置组件
+  - NotificationHistory.tsx - 通知历史组件
+  - NotificationRules.tsx - 通知规则组件
+  - NotificationSettings.tsx - 通知设置组件
+
+#### 数据库相关
+- server/db/migrations.js - 数据库迁移脚本
+- server/db/schema.sql - 数据库结构定义

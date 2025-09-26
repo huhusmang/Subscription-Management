@@ -57,7 +57,7 @@ A modern subscription management system that helps users easily manage and track
 - ✅ **Data Import/Export** - CSV and JSON format data import/export
 - ✅ **Theme Switching** - Support for light/dark/system themes
 - ✅ **Internationalization (i18n)** - Multi-language support with English and Chinese
-- ✅ **Notification System** - Smart notification system with Telegram integration
+- ✅ **Notification System** - Multi-channel notification system with Telegram and Email support
 
 ## 🛠 Technology Stack
 
@@ -76,8 +76,10 @@ A modern subscription management system that helps users easily manage and track
 - **Framework**: Express 5
 - **Database**: SQLite + better-sqlite3
 - **Scheduled Tasks**: node-cron
-- **Authentication**: Session-based login (username/password), all endpoints require login
-- **Notifications**: Telegram Bot API + Email (planned)
+- **Authentication**: Session-based login (username/password with bcrypt hashing), all endpoints require login
+- **Notifications**: Telegram Bot API + Email (SMTP with nodemailer)
+- **Session Management**: express-session with HTTP-only cookies
+- **Password Hashing**: bcryptjs for secure password storage
 
 ### Deployment
 - **Containerization**: Docker + Docker Compose
@@ -144,39 +146,17 @@ npm run dev
 Frontend interface: http://localhost:5173
 Backend service: http://localhost:3001/api
 
-## ⚠️ Notice
-
-**For users who installed the system before July 27, 2025:**
-
-Recent updates include database schema changes that were applied directly to `schema.sql` without proper migrations. If you encounter errors after pulling the latest code, please follow these steps:
-
-### Before Updating
-1. **Export your subscription data** - Use the data export feature in the application to backup all your subscription information
-2. **Backup your database file** - Make a copy of your `database.sqlite` file from the data directory
-
-### If You Encounter Database Errors
-If you experience database-related errors after updating:
-
-1. **Stop the application**
-2. **Backup your current database** (if not already done)
-3. **Reset the database**:
-   ```bash
-   cd server
-   npm run db:reset
-   ```
-4. **Re-import your data** using the import feature in the application
-
-### Data Location
-- **Docker deployment**: Database is located at the path specified in `DATABASE_PATH` environment variable (default: `/app/data/database.sqlite`)
-- **Local development**: Database is located in the `server` directory as `database.sqlite`
-
-Future updates will include proper database migrations to avoid this issue.
-
 ## 🔧 Configuration
 
 ### Environment Variables
 
 Create a `.env` file and configure the following variables:
+
+**Regarding the generation methods for SESSION_SECRET and ADMIN_PASSWORD_HASH:**
+
+- It is recommended to use a sufficiently long, high-strength random string for `SESSION_SECRET` (you can generate one using `openssl rand -base64 48`).
+- For `ADMIN_PASSWORD_HASH`, it is recommended to have the system automatically generate it upon first startup, or to generate it offline using a bcrypt tool (with a cost factor ≥12).
+- For detailed steps and security recommendations, please refer to [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md#session_secret-and-admin_password_hash-generation-methods).
 
 ```bash
 # Service port (optional, default 3001)
@@ -197,13 +177,22 @@ TIANAPI_KEY=your_tianapi_key_here
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_password
+ADMIN_PASSWORD_HASH=your_password_hash
+# On first start the server will print a derived ADMIN_PASSWORD_HASH. Copy that hash into your .env and remove ADMIN_PASSWORD when you deploy.
 
-# On first start the server will print a derived ADMIN_PASSWORD_HASH.
-# Copy that hash into your .env and remove ADMIN_PASSWORD when you deploy.
-
-# Telegram Bot Token (required for Telegram notifications)
+# Telegram notification settings (optional, for Telegram notifications)
 # Get from @BotFather on Telegram
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Email notification settings (optional, for Email notifications)
+# SMTP server configuration (Gmail example)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_FROM=Subscription Manager <no-reply@example.com>
+EMAIL_LOCALE=zh-CN
 
 # notification settings
 NOTIFICATION_DEFAULT_CHANNELS=["telegram"]

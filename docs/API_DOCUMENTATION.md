@@ -9,13 +9,42 @@
 
 ## 认证机制
 
-所有接口均需要登录后访问（基于会话的身份验证）。
+所有接口均需要登录后访问（基于用户名密码的会话认证）。
 
-相关端点：
+### 认证流程
 
-- `POST /api/auth/login`（请求体包含 `username`, `password`）
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
+1. **登录**: 使用管理员用户名和密码通过 `POST /api/auth/login` 端点获取会话
+2. **会话验证**: 后端使用 `express-session` 管理会话，Cookie 中存储会话ID
+3. **访问受保护接口**: 所有 `/api/protected/*` 端点都需要有效的会话
+
+### 认证端点
+
+- `POST /api/auth/login` - 用户名密码登录（请求体包含 `username`, `password`）
+- `POST /api/auth/logout` - 注销会话
+- `GET /api/auth/me` - 获取当前用户信息
+
+### 环境配置
+
+在 `.env` 文件中配置以下环境变量：
+
+```bash
+# 会话管理
+SESSION_SECRET=your_random_session_secret
+
+# 管理员认证
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password  # 首次启动时使用，系统会生成哈希值
+
+# 生产环境推荐使用哈希值（系统首次启动时会生成）
+ADMIN_PASSWORD_HASH=$2a$12$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+### 安全特性
+
+- **HTTP-Only Cookie**: 会话ID存储在HTTP-Only Cookie中，前端无法直接访问
+- **自动过期**: 会话默认12小时后过期
+- **安全标志**: 生产环境启用 `secure` 和 `sameSite` 标志
+- **密码哈希**: 使用bcrypt对密码进行安全哈希存储
 
 ## 响应格式
 
@@ -39,6 +68,7 @@
 
 ### 核心模块
 - **健康检查** - 服务状态检查
+- **认证管理** - 用户名密码登录和会话管理
 - **订阅管理** - 订阅CRUD操作和查询
 - **订阅管理服务** - 续费、过期处理等高级功能
 - **支付历史** - 支付记录管理和统计
@@ -48,6 +78,7 @@
 - **汇率管理** - 汇率数据和货币转换
 - **分类管理** - 订阅分类CRUD
 - **支付方式管理** - 支付方式CRUD
+- **通知系统** - 多渠道通知管理（Telegram、Email）
 - **续费调度器** - 自动续费任务管理
 
 ---
@@ -369,16 +400,63 @@
 
 - `400` - 请求参数错误
 - `401` - 未授权（未登录或会话无效）
+  - 认证失败时返回：`{"error": "Authentication required"}`
+  - 会话过期时返回：`{"error": "Session expired"}`
 - `404` - 资源未找到
 - `500` - 服务器内部错误
 
+## Cookie 和会话管理
+
+### 前端集成说明
+
+使用认证API时，需要在请求中包含会话Cookie：
+
+```javascript
+// 登录请求
+fetch('/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // 重要：包含会话Cookie
+  body: JSON.stringify({
+    username: 'admin',
+    password: 'your_password'
+  })
+});
+
+// 访问受保护接口
+fetch('/api/protected/subscriptions', {
+  method: 'GET',
+  credentials: 'include' // 重要：包含会话Cookie
+});
+```
+
 ## 使用示例
 
-### 创建订阅
+### 认证流程示例
+
+#### 1. 登录获取会话
 ```bash
+# 登录
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "your_password"
+  }' \
+  -c cookie.txt
+
+# 验证登录状态
+curl -b cookie.txt http://localhost:3001/api/auth/me
+```
+
+#### 2. 使用会话访问受保护接口
+```bash
+# 创建订阅
 curl -X POST http://localhost:3001/api/protected/subscriptions \
   -H "Content-Type: application/json" \
-  -b cookie.txt -c cookie.txt \
+  -b cookie.txt \
   -d '{
     "name": "Netflix",
     "plan": "Premium",
@@ -390,16 +468,179 @@ curl -X POST http://localhost:3001/api/protected/subscriptions \
     "category_id": 1,
     "renewal_type": "auto"
   }'
+
+# 获取订阅列表
+curl -b cookie.txt http://localhost:3001/api/subscriptions
+
+# 获取月度收入分析
+curl -b cookie.txt "http://localhost:3001/api/analytics/monthly-revenue?start_date=2025-01-01&end_date=2025-12-31&currency=USD"
 ```
 
-### 获取订阅列表
+#### 3. 登出
 ```bash
-curl http://localhost:3001/api/subscriptions
+curl -X POST http://localhost:3001/api/auth/logout \
+  -b cookie.txt
 ```
 
-### 获取月度收入分析
+### 通知系统示例
+
+#### 发送测试邮件通知
 ```bash
-curl "http://localhost:3001/api/analytics/monthly-revenue?start_date=2025-01-01&end_date=2025-12-31&currency=USD"
+curl -X POST http://localhost:3001/api/protected/notifications/test \
+  -H "Content-Type: application/json" \
+  -b cookie.txt \
+  -d '{"channel_type": "email"}'
+```
+
+#### 更新通知设置
+```bash
+curl -X PUT http://localhost:3001/api/protected/notifications/settings/1 \
+  -H "Content-Type: application/json" \
+  -b cookie.txt \
+  -d '{
+    "notification_channels": ["telegram", "email"],
+    "is_enabled": true,
+    "advance_days": 7
+  }'
+```
+
+---
+
+## 9. 通知系统 (Notifications)
+
+### 通知类型
+- `renewal_reminder` - 续订提醒
+- `expiration_warning` - 过期警告
+- `renewal_success` - 续订成功
+- `renewal_failure` - 续订失败
+- `subscription_change` - 订阅变更
+
+### 支持的通知渠道
+- `telegram` - Telegram机器人通知
+- `email` - 电子邮件通知
+
+### 公开接口
+
+#### GET /notifications/history
+获取通知历史记录。
+
+**查询参数:**
+- `page` (可选): 页码，默认1
+- `limit` (可选): 每页数量，默认20
+- `status` (可选): 状态筛选 (sent/failed)
+- `type` (可选): 通知类型筛选
+
+#### GET /notifications/stats
+获取通知统计信息。
+
+### 受保护接口 (需要登录)
+
+#### GET /protected/notifications/settings/:userId
+获取用户的通知设置。
+
+#### PUT /protected/notifications/settings/:id
+更新通知设置。
+
+**请求体:**
+```json
+{
+  "is_enabled": true,
+  "advance_days": 7,
+  "notification_channels": ["telegram", "email"],
+  "repeat_notification": false
+}
+```
+
+#### GET /protected/notifications/channels/:channelType
+获取指定类型的渠道配置。
+
+#### POST /protected/notifications/channels
+配置通知渠道。
+
+**请求体:**
+```json
+{
+  "channel_type": "telegram",
+  "config": {
+    "chat_id": "123456789"
+  }
+}
+```
+
+#### POST /protected/notifications/test
+发送测试通知。
+
+**请求体:**
+```json
+{
+  "channel_type": "email"
+}
+```
+
+#### POST /protected/notifications/send
+手动发送通知。
+
+**请求体:**
+```json
+{
+  "subscription_id": 42,
+  "notification_type": "renewal_reminder",
+  "channels": ["telegram", "email"]
+}
+```
+
+#### GET /protected/scheduler/settings
+获取调度器设置。
+
+#### PUT /protected/scheduler/settings
+更新调度器设置。
+
+**请求体:**
+```json
+{
+  "notification_check_time": "09:00",
+  "timezone": "Asia/Shanghai",
+  "is_enabled": true
+}
+```
+
+#### POST /protected/scheduler/trigger
+手动触发通知检查。
+
+---
+
+## 环境配置
+
+### 必需环境变量
+
+```bash
+# 服务器配置
+PORT=3001
+NODE_ENV=production
+SESSION_SECRET=your_random_session_secret
+
+# 数据库配置
+BASE_CURRENCY=CNY
+DATABASE_PATH=/app/data/database.sqlite
+
+# 管理员认证
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password  # 首次启动时使用
+ADMIN_PASSWORD_HASH=$2a$12$...  # 生产环境推荐使用
+
+# 汇率API
+TIANAPI_KEY=your_tianapi_key
+
+# Telegram通知
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+
+# 邮件通知
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_FROM=Subscription Manager <no-reply@example.com>
 ```
 
 ---
