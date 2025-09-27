@@ -20,18 +20,18 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { 
+import {
   Select,
-  SelectContent, 
+  SelectContent,
   SelectItem,
-  SelectTrigger, 
-  SelectValue 
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
-// import removed: Input (no longer used)
-
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useConfirmation } from "@/hooks/use-confirmation"
+import { useToast } from "@/hooks/use-toast"
 
 import { useSettingsStore, ThemeType } from "@/store/settingsStore"
 import { ImportModal } from "@/components/imports/ImportModal"
@@ -40,40 +40,40 @@ import {
   exportSubscriptionsToJSON,
   downloadFile,
 } from "@/lib/subscription-utils"
-// import removed: useToast (no longer used)
 import { ExchangeRateManager } from "@/components/ExchangeRateManager"
 import { OptionsManager } from "@/components/subscription/OptionsManager"
 import { NotificationSettings } from "@/components/notification/NotificationSettings"
 import { useTheme } from "next-themes"
+import { useAuthStore } from "@/store/authStore"
 
 export function SettingsPage() {
   const { t } = useTranslation(['settings', 'common'])
   const [searchParams] = useSearchParams()
 
-  // Import modal state
+  const { toast } = useToast()
+  const changePassword = useAuthStore((state) => state.changePassword)
+  const isAuthLoading = useAuthStore((state) => state.isLoading)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
 
-  // Get tab from URL params
   const defaultTab = searchParams.get('tab') || 'general'
 
-  // Theme from next-themes
   const { setTheme: setNextTheme } = useTheme()
 
-  // Settings store values
   const {
     theme,
     setTheme,
-
-
-
     resetSettings,
     isLoading,
-    fetchSettings
+    fetchSettings,
   } = useSettingsStore()
 
-  // Removed API Key state
-
-  // Subscription store methods
   const { subscriptions, resetSubscriptions, addSubscription } = useSubscriptionStore()
 
   const initializeSettings = useCallback(() => {
@@ -83,12 +83,78 @@ export function SettingsPage() {
   useEffect(() => {
     initializeSettings()
   }, [initializeSettings])
-  
-  // Removed API key effects
 
+  const getPasswordErrorMessage = (code?: string, fallback?: string) => {
+    switch (code) {
+      case 'CURRENT_PASSWORD_INVALID':
+        return t('currentPasswordInvalid')
+      case 'PASSWORDS_DO_NOT_MATCH':
+        return t('passwordsDoNotMatch')
+      case 'PASSWORD_COMPLEXITY_FAILED':
+        return t('passwordValidationFailed')
+      case 'PASSWORD_SAME_AS_OLD':
+        return t('passwordMustDiffer')
+      case 'MISSING_FIELDS':
+        return t('passwordUpdateFailed')
+      default:
+        return fallback ?? t('passwordUpdateFailed')
+    }
+  }
 
+  const validatePasswordForm = () => {
+    if (!currentPassword || !newPassword) {
+      setPasswordSuccess(null)
+      setPasswordError(t('passwordUpdateFailed'))
+      return false
+    }
 
-  // Removed API key handlers
+    if (newPassword !== confirmPassword) {
+      setPasswordSuccess(null)
+      setPasswordError(t('passwordsDoNotMatch'))
+      return false
+    }
+
+    const rule = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
+    if (!rule.test(newPassword)) {
+      setPasswordSuccess(null)
+      setPasswordError(t('passwordValidationFailed'))
+      return false
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordSuccess(null)
+      setPasswordError(t('passwordMustDiffer'))
+      return false
+    }
+
+    setPasswordError(null)
+    return true
+  }
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!validatePasswordForm()) {
+      return
+    }
+
+    setIsSubmittingPassword(true)
+    const result = await changePassword(currentPassword, newPassword, confirmPassword)
+    setIsSubmittingPassword(false)
+
+    if (result.ok) {
+      const successMessage = result.message ?? t('passwordUpdated')
+      toast({ description: successMessage })
+      setPasswordError(null)
+      setPasswordSuccess(successMessage)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } else {
+      const errorMessage = getPasswordErrorMessage(result.code, result.error)
+      setPasswordSuccess(null)
+      setPasswordError(errorMessage)
+    }
+  }
 
   // Handle data export
   const handleExportData = () => {
@@ -144,6 +210,7 @@ export function SettingsPage() {
             <TabsTrigger value="currency" className="text-xs sm:text-sm px-2 sm:px-3">{t('currency')}</TabsTrigger>
             <TabsTrigger value="options" className="text-xs sm:text-sm px-2 sm:px-3">{t('options')}</TabsTrigger>
             <TabsTrigger value="notifications" className="text-xs sm:text-sm px-2 sm:px-3">{t('notifications')}</TabsTrigger>
+            <TabsTrigger value="security" className="text-xs sm:text-sm px-2 sm:px-3">{t('security')}</TabsTrigger>
             <TabsTrigger value="data" className="text-xs sm:text-sm px-2 sm:px-3">{t('data')}</TabsTrigger>
           </TabsList>
         </div>
@@ -193,7 +260,72 @@ export function SettingsPage() {
         <TabsContent value="notifications" className="space-y-4">
           <NotificationSettings userId={1} />
         </TabsContent>
-   
+
+        <TabsContent value="security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('changePassword')}</CardTitle>
+              <CardDescription>{t('changePasswordDesc')}</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleChangePassword}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">{t('currentPassword')}</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">{t('newPassword')}</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">{t('passwordRules')}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">{t('confirmNewPassword')}</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {passwordError}
+                  </p>
+                )}
+                {passwordSuccess && !passwordError && (
+                  <p className="text-sm text-emerald-600" role="status">
+                    {passwordSuccess}
+                  </p>
+                )}
+              </CardContent>
+              <CardFooter className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Button type="submit" disabled={isSubmittingPassword || isAuthLoading}>
+                  {isSubmittingPassword || isAuthLoading ? t('signingIn', { ns: 'auth' }) : t('changePassword')}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  {t('passwordRules')}
+                </p>
+              </CardFooter>
+            </form>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="data" className="space-y-4">
           <Card>
             <CardHeader>

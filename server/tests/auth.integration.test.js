@@ -191,4 +191,47 @@ describe('Admin authentication and migrations', () => {
             cleanupTempDir(dir);
         }
     });
+
+    test('authenticated change password endpoint rotates credentials', async () => {
+        const { dir, path: dbPath } = createTempDatabasePath();
+
+        try {
+            const migrations = new DatabaseMigrations(dbPath);
+            await migrations.runMigrations();
+            migrations.close();
+
+            const db = new Database(dbPath);
+            const app = express();
+            app.use(express.json());
+            const testSession = session({ secret: 'test', resave: false, saveUninitialized: false });
+            app.use(testSession);
+            app.use('/auth', createAuthRoutes(db));
+
+            const agent = request.agent(app);
+
+            const loginResponse = await agent
+                .post('/auth/login')
+                .send({ username: 'admin', password: 'super-secret' });
+            expect(loginResponse.status).toBe(200);
+
+            const changeResponse = await agent
+                .post('/auth/change-password')
+                .send({ currentPassword: 'super-secret', newPassword: 'another-secret1', confirmPassword: 'another-secret1' });
+            expect(changeResponse.status).toBe(200);
+
+            const oldPasswordLogin = await agent
+                .post('/auth/login')
+                .send({ username: 'admin', password: 'super-secret' });
+            expect(oldPasswordLogin.status).toBe(401);
+
+            const newPasswordLogin = await agent
+                .post('/auth/login')
+                .send({ username: 'admin', password: 'another-secret1' });
+            expect(newPasswordLogin.status).toBe(200);
+
+            db.close();
+        } finally {
+            cleanupTempDir(dir);
+        }
+    });
 });

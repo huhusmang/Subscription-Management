@@ -177,7 +177,7 @@ TIANAPI_KEY=your_tianapi_key_here
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_password
-ADMIN_PASSWORD_HASH=your_password_hash
+# ADMIN_PASSWORD_HASH=your_password_hash (optional)
 # On first start the server will print a derived ADMIN_PASSWORD_HASH. Copy that hash into your .env and remove ADMIN_PASSWORD when you deploy.
 
 # Telegram notification settings (optional, for Telegram notifications)
