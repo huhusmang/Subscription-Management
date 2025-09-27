@@ -27,7 +27,7 @@ const { createNotificationRoutes, createProtectedNotificationRoutes } = require(
 const { createSchedulerRoutes, createProtectedSchedulerRoutes } = require('./routes/scheduler');
 const userPreferencesRoutes = require('./routes/userPreferences');
 const templatesRoutes = require('./routes/templates');
-const authRoutes = require('./routes/auth');
+const createAuthRoutes = require('./routes/auth');
 
 const app = express();
 const port = process.env.PORT || 3001; // Use PORT from environment or default to 3001
@@ -65,7 +65,7 @@ const apiRouter = express.Router();
 const protectedApiRouter = express.Router();
 
 // Auth routes (no login required)
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', createAuthRoutes(db));
 
 // Apply session auth to all API routes
 apiRouter.use(requireLogin);

@@ -1,7 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
-const { verify } = require('crypto');
+const bcrypt = require('bcryptjs');
 
 class DatabaseMigrations {
   constructor(dbPath) {
@@ -37,6 +37,11 @@ class DatabaseMigrations {
         version: 6,
         name: 'add_email_notification_support',
         up: () => this.migration_006_add_email_notification_support()
+      },
+      {
+        version: 7,
+        name: 'add_admin_users_table',
+        up: () => this.migration_007_add_admin_users_table()
       }
     ];
   }
@@ -535,34 +540,123 @@ class DatabaseMigrations {
   }
 
   // Migration 006: Add email notification support
-    migration_006_add_email_notification_support() {
-      console.log('📝 Ensuring notification settings support email channel...');
-  
-      try {
-        const columns = this.db.prepare(`PRAGMA table_info(notification_settings)`).all();
-        const hasNotificationChannels = columns.some((column) => column.name === 'notification_channels');
-  
-        if (!hasNotificationChannels) {
-          this.db.exec(`
-            ALTER TABLE notification_settings
-            ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
-          `);
-          console.log('✅ Added notification_channels column to notification_settings');
-        }
-  
-        // Backfill NULL values just in case
+  migration_006_add_email_notification_support() {
+    console.log('📝 Ensuring notification settings support email channel...');
+
+    try {
+      const columns = this.db.prepare(`PRAGMA table_info(notification_settings)`).all();
+      const hasNotificationChannels = columns.some((column) => column.name === 'notification_channels');
+
+      if (!hasNotificationChannels) {
         this.db.exec(`
-          UPDATE notification_settings
-          SET notification_channels = '["telegram"]'
-          WHERE notification_channels IS NULL OR notification_channels = ''
+          ALTER TABLE notification_settings
+          ADD COLUMN notification_channels TEXT NOT NULL DEFAULT '["telegram"]'
         `);
-  
-        console.log('✅ Notification settings ready for email channels');
-      } catch (error) {
-        console.error('❌ Failed to update notification settings for email support:', error);
-        throw error;
+        console.log('✅ Added notification_channels column to notification_settings');
+      }
+
+      // Backfill NULL values just in case
+      this.db.exec(`
+        UPDATE notification_settings
+        SET notification_channels = '["telegram"]'
+        WHERE notification_channels IS NULL OR notification_channels = ''
+      `);
+
+      console.log('✅ Notification settings ready for email channels');
+    } catch (error) {
+      console.error('❌ Failed to update notification settings for email support:', error);
+      throw error;
+    }
+  }
+
+  // Migration 007: Add admin users table
+  migration_007_add_admin_users_table() {
+    console.log('📝 Adding admin users table...');
+
+    const hasUsersTable = this.db.prepare(`
+      SELECT name FROM sqlite_master
+      WHERE type = 'table' AND name = 'users'
+    `).get();
+
+    if (!hasUsersTable) {
+      this.db.exec(`
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'admin',
+          last_login_at TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      console.log('✅ Created users table');
+    } else {
+      console.log('ℹ️  Users table already exists, ensuring schema...');
+
+      const pragma = this.db.prepare('PRAGMA table_info(users)').all();
+      const requiredColumns = ['id', 'username', 'password_hash', 'role', 'last_login_at', 'created_at', 'updated_at'];
+      const existingColumns = pragma.map(column => column.name);
+
+      requiredColumns.forEach(column => {
+        if (!existingColumns.includes(column)) {
+          throw new Error(`Missing required column \`${column}\` in users table`);
+        }
+      });
+    }
+
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminQuery = this.db.prepare('SELECT * FROM users WHERE username = ?');
+    const existingAdmin = adminQuery.get(adminUsername);
+
+    if (!existingAdmin) {
+      const now = new Date().toISOString();
+      const configuredHash = process.env.ADMIN_PASSWORD_HASH;
+      const configuredPassword = process.env.ADMIN_PASSWORD;
+
+      let passwordHash = configuredHash;
+      if (!passwordHash) {
+        if (!configuredPassword) {
+          console.warn('⚠️  ADMIN_PASSWORD or ADMIN_PASSWORD_HASH not provided. Using default password "admin" for seeding.');
+        }
+        const passwordToHash = configuredPassword || 'admin';
+        passwordHash = bcrypt.hashSync(passwordToHash, 12);
+      }
+
+      this.db.prepare(`
+        INSERT INTO users (username, password_hash, role, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(adminUsername, passwordHash, 'admin', now, now);
+
+      console.log(`✅ Seeded default admin user \`${adminUsername}\``);
+
+      if (!configuredHash && configuredPassword) {
+        const generatedHash = passwordHash;
+        console.warn('⚠️  Generated ADMIN_PASSWORD_HASH from ADMIN_PASSWORD during migration.');
+        console.warn('   Consider storing the following hash and removing ADMIN_PASSWORD for improved security:');
+        console.warn(`   ADMIN_PASSWORD_HASH=${generatedHash}`);
+      }
+    } else {
+      const updates = {};
+      let needsUpdate = false;
+      if (!existingAdmin.created_at) {
+        updates.created_at = new Date().toISOString();
+        needsUpdate = true;
+      }
+      if (!existingAdmin.updated_at) {
+        updates.updated_at = new Date().toISOString();
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        const setClause = Object.keys(updates)
+          .map(column => `${column} = ?`)
+          .join(', ');
+        this.db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...Object.values(updates), existingAdmin.id);
+        console.log('ℹ️  Updated existing admin timestamps');
       }
     }
+  }
 
   // Helper method to parse SQL statements properly
   parseSQL(sql) {

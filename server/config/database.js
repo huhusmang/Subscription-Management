@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const config = require('./index');
+const { createAdminUserManager } = require('./authCredentials');
 
 // 用于控制数据库路径日志输出的标志
 let dbPathLogged = false;
@@ -64,6 +65,9 @@ function initializeDatabase() {
 
             console.log('✅ Database schema is up to date!');
         }
+
+        const adminManager = createAdminUserManager(db);
+        adminManager.bootstrapDefaultAdmin();
 
         return db;
     } catch (error) {

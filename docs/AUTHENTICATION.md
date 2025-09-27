@@ -89,18 +89,18 @@ openssl rand -base64 48
 本系统使用单一管理员账户。管理员密码有两种配置方式：明文 `ADMIN_PASSWORD` 与哈希 `ADMIN_PASSWORD_HASH`，两者的优先级与生效时机如下。
 
 - 优先级：`ADMIN_PASSWORD_HASH` > `ADMIN_PASSWORD`
-- 读取与缓存时机：在后端进程启动时由 `server/config/authCredentials.js` 的 `getAdminCredentials()` 读取一次，并写入内存缓存 `cachedCredentials`；之后整个进程生命周期都仅使用内存中的值，不会在每个请求动态读取 `.env`。
-- 登录校验：`/api/auth/login` 使用 `bcrypt.compare(plain, cachedHash)` 验证（参见 `server/routes/auth.js`）。
+- 引导流程：数据库迁移脚本会创建 `users` 表，并通过 `server/config/authCredentials.js` 中的 `createAdminUserManager()` 将默认管理员写入数据库。如果仅提供了 `ADMIN_PASSWORD`，会即时生成 bcrypt 哈希后再写入。
+- 登录校验：`/api/auth/login` 会通过 `UserService` 查询数据库中的管理员记录，并使用 `bcrypt.compare(plain, storedHash)` 验证。
 
 ### 首次启动与推荐生产流程
 
 1. 在 `.env` 中设置：
    - `SESSION_SECRET`
    - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`（明文，仅在首次或轮换时临时使用）
-2. 启动后端。启动日志会打印派生的哈希：`ADMIN_PASSWORD_HASH=...`。
-3. 将打印出的值复制到 `.env` 的 `ADMIN_PASSWORD_HASH`，并删除明文 `ADMIN_PASSWORD`。
-4. 重启后端。之后将只依赖 `ADMIN_PASSWORD_HASH`，不会再重新生成或改变。
+   - `ADMIN_PASSWORD`（明文，仅在首次或轮换时临时使用）或 `ADMIN_PASSWORD_HASH`
+2. 执行 `npm run db:init` 或启动后端。迁移会创建 `users` 表并写入管理员账户。
+3. 如使用明文密码，启动日志或脚本会提示生成的哈希。将其复制到 `.env` 的 `ADMIN_PASSWORD_HASH`，并删除明文 `ADMIN_PASSWORD`。
+4. 重启后端后将只依赖数据库中的哈希。后续不会自动覆盖。
 
 示例：
 
@@ -123,21 +123,20 @@ ADMIN_PASSWORD_HASH=$2a$12$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ### 为什么重启时哈希会变化？
 
-当仅配置了明文 `ADMIN_PASSWORD` 而未提供 `ADMIN_PASSWORD_HASH` 时，系统在每次启动都会用随机盐执行一次 bcrypt，因此打印的哈希每次都不同。这是 bcrypt 的正常安全特性（即使密码相同，盐不同导致哈希不同）。将打印出的哈希写入 `ADMIN_PASSWORD_HASH` 并删除明文后，重启将不再变化。
+仅配置明文 `ADMIN_PASSWORD` 时，每次引导都会重新生成 bcrypt 哈希写入数据库；盐不同导致哈希不同。将生成的哈希写入 `ADMIN_PASSWORD_HASH` 并删除明文后，后续迁移或重启都不会改变现有记录。
 
 ### 运行时是否会再读取 `.env` 或重新生成？
 
-不会。凭证在进程启动时被读取并缓存到内存。登录校验始终使用该内存值。只有在你修改 `.env` 并重启进程后，新的值才会生效。
+不会。登录流程直接查询 SQLite 数据库，不再缓存凭证到内存。只有在运行 `rotate-admin-password` 脚本、更新 `.env` 并重新执行引导时，密码才会发生变化。
 
 ### 密码轮换（更改管理员密码）
 
-- 方式 A（在线一次性生成）：
-  1) 在 `.env` 暂时设置 `ADMIN_PASSWORD=new_secure_password`（保留原有 `ADMIN_PASSWORD_HASH` 亦可）。
-  2) 启动一次后端，复制日志中打印的 `ADMIN_PASSWORD_HASH`。
-  3) 用新哈希替换 `.env` 中的 `ADMIN_PASSWORD_HASH`，并移除明文 `ADMIN_PASSWORD`。
-  4) 重启后端。
+- 方式 A（脚本执行，推荐）：
+  1) 运行 `node server/scripts/rotate-admin-password.js --password new_secure_password`。
+  2) 记录脚本输出的哈希，更新 `.env` 中的 `ADMIN_PASSWORD_HASH`，删除明文密码。
+  3) （如需）重启后端进程以载入新的环境变量。
 
-- 方式 B（离线生成）：
+- 方式 B（离线生成哈希）：
   - 使用 bcrypt 工具以成本因子 ≥ 12 生成哈希，直接写入 `ADMIN_PASSWORD_HASH`，重启后端。
 
 注意：轮换后，已建立的会话在到期前仍然有效；新登录将使用新哈希进行校验。

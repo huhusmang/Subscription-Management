@@ -380,40 +380,22 @@ function requireLogin(req, res, next) {
 
 ### 认证凭证管理 (config/authCredentials.js)
 ```javascript
-const bcrypt = require('bcryptjs');
+const { createAdminUserManager } = require('../config/authCredentials');
 
-let cachedCredentials = null;
+// 在数据库连接可用时创建管理器
+const adminManager = createAdminUserManager(db);
 
-function getAdminCredentials() {
-    if (cachedCredentials) {
-        return cachedCredentials;
-    }
+// 确保默认管理员存在（若不存在则根据环境变量引导创建）
+const adminUser = adminManager.ensureAdminUser();
 
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const configuredHash = process.env.ADMIN_PASSWORD_HASH;
-    const plainPassword = process.env.ADMIN_PASSWORD;
+// 轮换密码时使用
+adminManager.setAdminPassword({ password: 'new_secure_password' });
 
-    if (!configuredHash && !plainPassword) {
-        console.error('❌ Missing admin password configuration. Set ADMIN_PASSWORD in your environment file.');
-        process.exit(1);
-    }
-
-    let passwordHash = configuredHash;
-    if (!passwordHash && plainPassword) {
-        passwordHash = bcrypt.hashSync(plainPassword, 12);
-        console.warn('⚠️  Generated ADMIN_PASSWORD_HASH from ADMIN_PASSWORD.');
-        console.warn('   For better security, set ADMIN_PASSWORD_HASH to the value below and remove ADMIN_PASSWORD:');
-        console.warn(`   ADMIN_PASSWORD_HASH=${passwordHash}`);
-    }
-
-    cachedCredentials = {
-        username: adminUsername,
-        passwordHash
-    };
-
-    return cachedCredentials;
-}
+// 登录成功后记录最后登录时间
+adminManager.recordSuccessfulLogin();
 ```
+
+> 认证凭证现保存在 SQLite 的 `users` 表中。迁移脚本会自动创建此表并回填默认管理员。`createAdminUserManager` 通过 `UserService` 对该表进行读写操作。
 
 ### 错误处理中间件 (middleware/errorHandler.js)
 ```javascript
