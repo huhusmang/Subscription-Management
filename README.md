@@ -206,8 +206,6 @@ NOTIFICATION_DEFAULT_ADVANCE_DAYS=7
 NOTIFICATION_DEFAULT_REPEAT_NOTIFICATION=false
 ```
 
-> ℹ️ 数据库迁移会创建 `users` 表用于持久化管理员凭证。若需轮换密码，可执行 `node server/scripts/rotate-admin-password.js --password new_secure_password`，并将脚本输出的哈希写入 `ADMIN_PASSWORD_HASH`。
-
 ### Database Management
 
 ```bash
