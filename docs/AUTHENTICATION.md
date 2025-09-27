@@ -17,6 +17,10 @@
 SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_password
+# 可选：精细化会话 Cookie 行为与代理配置
+# TRUST_PROXY=1
+# SESSION_COOKIE_SECURE=auto
+# SESSION_COOKIE_SAMESITE=lax
 ```
 
 服务器启动时会从 `ADMIN_PASSWORD` 派生出一个bcrypt哈希值，记录一次并将哈希保存在内存中。将生成的值复制到 `ADMIN_PASSWORD_HASH` 中，并删除 `ADMIN_PASSWORD` 以用于生产环境部署。
@@ -26,7 +30,9 @@ ADMIN_PASSWORD=your_secure_password
 - `SESSION_SECRET` 必须是一个长随机字符串，以确保会话Cookie无法被伪造。如果缺失，后端会为每个进程生成一个临时密钥并打印警告；这样会导致每次重启时会话失效，因此建议明确设置。
 - `ADMIN_PASSWORD_HASH`（如果提供）优先于明文密码。它应是使用成本≥12生成的bcrypt哈希值。
 - 密钥轮换：更新 `ADMIN_USERNAME` 或 `ADMIN_PASSWORD_HASH` 需要重启服务器。现有会话在到期前仍然有效。
-
+- `TRUST_PROXY`：当后端部署在反向代理、负载均衡或 CDN（如 Nginx、Caddy、Cloudflare）之后时，需要设置代理层级（例如单层代理设为 `1`）。未设置时 `secure` Cookie 可能无法生效，从而导致浏览器丢弃 `sid`。
+- `SESSION_COOKIE_SECURE`：控制 `express-session` 的 `cookie.secure` 行为。默认 `auto`（生产环境自动开启）。当在 HTTP 内网或需要覆盖默认行为时，可显式设为 `true` 或 `false`。
+- `SESSION_COOKIE_SAMESITE`：控制 `SameSite` 策略（`lax`/`strict`/`none`）。若前端通过跨站点的 HTTPS 域名访问，需要设为 `none` 并配合 `SESSION_COOKIE_SECURE=true`。
 
 
 ## SESSION_SECRET 与 ADMIN_PASSWORD_HASH 生成方法

@@ -178,6 +178,9 @@ SESSION_SECRET=your_random_session_secret
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_password
 # ADMIN_PASSWORD_HASH=your_password_hash (可选）
+# TRUST_PROXY=1                     # 位于反向代理/CDN 后方时设置代理层级
+# SESSION_COOKIE_SECURE=auto        # 控制 Cookie 的 secure 策略（auto|true|false）
+# SESSION_COOKIE_SAMESITE=lax       # 控制 SameSite 策略（lax|strict|none）
 # 首次启动时会输出生成的 ADMIN_PASSWORD_HASH，可将其复制到 .env 并删除 ADMIN_PASSWORD 以提升安全性。
 
 # Telegram 通知设置 (可选，用于 Telegram 通知)
