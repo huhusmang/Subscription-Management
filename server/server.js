@@ -32,6 +32,21 @@ const createAuthRoutes = require('./routes/auth');
 const app = express();
 const port = process.env.PORT || 3001; // Use PORT from environment or default to 3001
 
+// Configure trust proxy (required when behind reverse proxies/CDN)
+const trustProxyConfig = process.env.TRUST_PROXY;
+if (trustProxyConfig !== undefined) {
+  if (trustProxyConfig === 'true') {
+    app.set('trust proxy', true);
+  } else if (trustProxyConfig === 'false') {
+    app.set('trust proxy', false);
+  } else {
+    const parsed = Number(trustProxyConfig);
+    app.set('trust proxy', Number.isNaN(parsed) ? trustProxyConfig : parsed);
+  }
+} else if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());

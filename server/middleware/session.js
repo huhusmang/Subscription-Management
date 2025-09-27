@@ -11,6 +11,13 @@ function createSessionMiddleware() {
 
     const isProduction = process.env.NODE_ENV === 'production';
 
+    const cookieSecureConfig = process.env.SESSION_COOKIE_SECURE ?? (isProduction ? 'auto' : 'false');
+    const cookieSameSiteConfig = process.env.SESSION_COOKIE_SAMESITE ?? 'lax';
+
+    const secure = cookieSecureConfig === 'auto'
+        ? 'auto'
+        : cookieSecureConfig === 'true';
+
     return session({
         name: 'sid',
         secret: sessionSecret,
@@ -18,8 +25,8 @@ function createSessionMiddleware() {
         saveUninitialized: false,
         cookie: {
             httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'lax' : 'lax',
+            secure,
+            sameSite: cookieSameSiteConfig,
             maxAge: 1000 * 60 * 60 * 12 // 12 hours
         }
     });
