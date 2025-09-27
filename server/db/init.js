@@ -1,6 +1,7 @@
-const crypto = require('crypto');
+const Database = require('better-sqlite3');
 const config = require('../config');
 const DatabaseMigrations = require('./migrations');
+const { createAdminUserManager } = require('../config/authCredentials');
 
 const dbPath = config.getDatabasePath();
 
@@ -28,7 +29,14 @@ async function initializeDatabase() {
 
         console.log('✅ Database schema is up to date!');
 
-        // API key generation removed. Session-based auth is used instead.
+        const db = new Database(dbPath);
+        try {
+            const adminManager = createAdminUserManager(db);
+            adminManager.bootstrapDefaultAdmin();
+            console.log('✅ Admin user bootstrapped successfully.');
+        } finally {
+            db.close();
+        }
 
         console.log('🎉 Database initialization completed successfully!');
         console.log('\n📊 Database is ready with all required tables and data.');
