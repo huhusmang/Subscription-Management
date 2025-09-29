@@ -215,7 +215,7 @@ INSERT OR IGNORE INTO payment_methods (value, label) VALUES
 
 -- Insert default exchange rates (Base currency from application config)
 -- Note: These rates should match BASE_CURRENCY configuration
--- Only supported currencies: USD, EUR, GBP, CAD, AUD, JPY, CNY, TRY, HKD
+-- Only supported currencies: USD, EUR, GBP, CAD, AUD, JPY, CNY, TRY, HKD, INR
 INSERT OR IGNORE INTO exchange_rates (from_currency, to_currency, rate) VALUES
 ('CNY', 'CNY', 1.0000),
 ('CNY', 'USD', 0.1538),
@@ -225,4 +225,5 @@ INSERT OR IGNORE INTO exchange_rates (from_currency, to_currency, rate) VALUES
 ('CNY', 'CAD', 0.1923),
 ('CNY', 'AUD', 0.2077),
 ('CNY', 'TRY', 4.2000),
-('CNY', 'HKD', 1.1923);
+('CNY', 'HKD', 1.1923),
+('CNY', 'INR', 12.4649);

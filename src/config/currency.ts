@@ -4,10 +4,10 @@
  */
 
 // 支持的货币类型
-export type CurrencyType = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'CNY' | 'TRY' | 'HKD';
+export type CurrencyType = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'CNY' | 'TRY' | 'HKD' | 'INR';
 
 // 所有支持的货币列表（固定不变）
-const ALL_SUPPORTED_CURRENCIES: CurrencyType[] = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'TRY', 'HKD'];
+const ALL_SUPPORTED_CURRENCIES: CurrencyType[] = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CNY', 'TRY', 'HKD', 'INR'];
 
 // 基础货币配置 - 修改这里就能改变整个系统的基础货币
 export const BASE_CURRENCY: CurrencyType = 'CNY';
@@ -28,7 +28,8 @@ export const CURRENCY_INFO: Record<CurrencyType, { name: string; symbol: string 
   AUD: { name: 'Australian Dollar', symbol: 'A$' },
   JPY: { name: 'Japanese Yen', symbol: '¥' },
   TRY: { name: 'Turkish Lira', symbol: '₺' },
-  HKD: { name: 'Hong Kong Dollar', symbol: 'HK$' }
+  HKD: { name: 'Hong Kong Dollar', symbol: 'HK$' },
+  INR: { name: 'Indian Rupee', symbol: '₹' }
 };
 
 // 基础汇率配置 - 根据基础货币动态生成
@@ -42,7 +43,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     AUD: 0.2077,
     JPY: 16.9231,
     TRY: 4.2000,
-    HKD: 1.1923
+    HKD: 1.1923,
+    INR: 12.4649
   },
   USD: {
     USD: 1,
@@ -53,7 +55,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     AUD: 1.3500,
     JPY: 110.0000,
     TRY: 27.0000,
-    HKD: 7.8000
+    HKD: 7.8000,
+    INR: 88.7520
   },
   EUR: {
     EUR: 1,
@@ -64,7 +67,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     AUD: 1.5882,
     JPY: 129.4118,
     TRY: 31.7647,
-    HKD: 9.1765
+    HKD: 9.1765,
+    INR: 104.0530
   },
   GBP: {
     GBP: 1,
@@ -75,7 +79,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     AUD: 1.8000,
     JPY: 146.6667,
     TRY: 36.0000,
-    HKD: 10.3333
+    HKD: 10.3333,
+    INR: 119.2906
   },
   CAD: {
     CAD: 1,
@@ -86,7 +91,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     AUD: 1.0800,
     JPY: 88.0000,
     TRY: 21.6000,
-    HKD: 6.2400
+    HKD: 6.2400,
+    INR: 63.7435
   },
   AUD: {
     AUD: 1,
@@ -97,7 +103,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     CAD: 0.9259,
     JPY: 81.4815,
     TRY: 20.0000,
-    HKD: 5.7778
+    HKD: 5.7778,
+    INR: 58.3085
   },
   JPY: {
     JPY: 1,
@@ -108,7 +115,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     CAD: 0.0114,
     AUD: 0.0123,
     TRY: 0.2455,
-    HKD: 0.0667
+    HKD: 0.0667,
+    INR: 0.5967
   },
   TRY: {
     TRY: 1,
@@ -119,7 +127,8 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     CAD: 0.0463,
     AUD: 0.0500,
     JPY: 4.0741,
-    HKD: 0.2889
+    HKD: 0.2889,
+    INR: 2.1348
   },
   HKD: {
     HKD: 1,
@@ -130,7 +139,20 @@ const BASE_RATES: Record<CurrencyType, Record<CurrencyType, number>> = {
     CAD: 0.1603,
     AUD: 0.1731,
     JPY: 14.1026,
-    TRY: 3.4615
+    TRY: 3.4615,
+    INR: 11.4069
+    },
+  INR: {
+    INR: 1.0000,
+    USD: 0.0112,
+    CNY: 0.0802,
+    EUR: 0.0096,
+    GBP: 0.0083,
+    CAD: 0.0156,
+    AUD: 0.0171,
+    JPY: 1.6760,
+    TRY: 0.4683,
+    HKD: 0.0876
   }
 };
 

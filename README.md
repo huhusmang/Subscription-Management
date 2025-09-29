@@ -50,7 +50,7 @@ A modern subscription management system that helps users easily manage and track
 
 ### Advanced Features
 - ✅ **Automatic Renewal Processing** - Smart detection of expiring subscriptions with automatic updates
-- ✅ **Multi-currency Support** - Real-time conversion for 9 major currencies (USD, EUR, GBP, CAD, AUD, JPY, CNY, TRY, HKD)
+- ✅ **Multi-currency Support** - Real-time conversion for 9 major currencies (USD, EUR, GBP, CAD, AUD, JPY, CNY, TRY, HKD, INR)
 - ✅ **Automatic Exchange Rate Updates** - Integrated with Tianapi for daily exchange rate updates
 - ✅ **Expense Report Dashboard** - Comprehensive expense analysis and visualization
 - ✅ **Payment History Tracking** - Complete payment records and historical analysis
