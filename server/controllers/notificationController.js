@@ -84,6 +84,19 @@ class NotificationController {
             }
 
             const { is_enabled, advance_days, notification_channels, repeat_notification } = updateData;
+
+            // Normalize boolean values from SQLite integers to actual booleans
+            const normalizeBoolean = (value) => {
+                if (typeof value === 'boolean') return value;
+                if (value === 1 || value === '1' || value === 'true') return true;
+                if (value === 0 || value === '0' || value === 'false') return false;
+                return value;
+            };
+
+            // Normalize the boolean values
+            const normalizedIsEnabled = normalizeBoolean(is_enabled);
+            const normalizedRepeatNotification = normalizeBoolean(repeat_notification);
+
             const db = this.notificationService.db;
 
             // First get the current setting to check notification type
@@ -103,10 +116,10 @@ class NotificationController {
             `;
 
             const result = db.prepare(query).run(
-                is_enabled ? 1 : 0, // Convert boolean to integer for SQLite
+                normalizedIsEnabled ? 1 : 0, // Convert normalized boolean to integer for SQLite
                 finalAdvanceDays,
                 JSON.stringify(notification_channels || ['telegram']),
-                repeat_notification ? 1 : 0, // Convert boolean to integer for SQLite
+                normalizedRepeatNotification ? 1 : 0, // Convert normalized boolean to integer for SQLite
                 settingId
             );
 

@@ -102,13 +102,27 @@ class Validator {
     }
 
     /**
-     * 验证布尔类型
+     * 验证布尔类型（支持SQLite的整数布尔值：0/1）
      * @param {*} value - 值
      * @param {string} field - 字段名
      */
     boolean(value, field) {
-        if (value !== undefined && value !== null && typeof value !== 'boolean') {
-            this.addError(field, `${field} must be a boolean`);
+        if (value !== undefined && value !== null) {
+            // 支持标准布尔值
+            if (typeof value === 'boolean') {
+                return this;
+            }
+            // 支持SQLite的整数布尔值：0 = false, 1 = true
+            if (value === 0 || value === 1) {
+                return this;
+            }
+            // 支持字符串形式的布尔值
+            if (value === '0' || value === '1' ||
+                value === 'true' || value === 'false') {
+                return this;
+            }
+
+            this.addError(field, `${field} must be a boolean (true/false) or integer boolean (0/1)`);
         }
         return this;
     }
