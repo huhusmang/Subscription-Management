@@ -10,9 +10,9 @@ export const CURRENCY_NAMES: Record<CurrencyCode, string> = {
   KRW: 'South Korean Won',
   CAD: 'Canadian Dollar',
   AUD: 'Australian Dollar',
-  INR: 'Indian Rupee',
   TRY: 'Turkish Lira',
   HKD: 'Hong Kong Dollar',
+  INR: 'Indian Rupee',
 };
 
 export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
@@ -24,9 +24,9 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   KRW: '₩',
   CAD: 'C$',
   AUD: 'A$',
-  INR: '₹',
   TRY: '₺',
   HKD: 'HK$',
+  INR: '₹',
 };
 
 // Chart colors

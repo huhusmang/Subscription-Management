@@ -89,6 +89,7 @@ export function ExchangeRateManager() {
                   <SelectItem value="JPY">JPY - {t('japaneseYen')}</SelectItem>
                   <SelectItem value="TRY">TRY - {t('turkishLira')}</SelectItem>
                   <SelectItem value="HKD">HKD - {t('hongKongDollar')}</SelectItem>
+                  <SelectItem value="INR">INR - {t('indianRupee')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground mt-1">
