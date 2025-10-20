@@ -13,13 +13,19 @@ import { Trash2, Edit, Plus } from 'lucide-react'
 import { useSubscriptionStore } from '@/store/subscriptionStore'
 import { useToast } from '@/hooks/use-toast'
 
-// Utility function to generate a value from a label
+// Utility function to generate a safe value from a label that supports Unicode
 function generateValue(label: string): string {
-  return label
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
+  const normalized = label
     .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+
+  const sanitized = normalized
+    .replace(/\s+/g, '-') // Replace whitespace with hyphens
+    .replace(/[^-\p{L}\p{N}]/gu, '') // Keep letters/numbers (including CJK) and hyphens
+
+  // Ensure we always return a non-empty value for API usage
+  return sanitized || `option-${Date.now()}`
 }
 
 interface EditDialogProps {

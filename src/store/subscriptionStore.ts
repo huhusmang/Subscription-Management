@@ -433,7 +433,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Edit a category option
       editCategory: async (oldValue, newCategory) => {
         try {
-          await apiClient.put(`/protected/categories/${oldValue}`, newCategory);
+          await apiClient.put(`/protected/categories/${encodeURIComponent(oldValue)}`, newCategory);
 
           // Refresh categories from server
           await get().fetchCategories();
@@ -446,7 +446,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Delete a category option
       deleteCategory: async (value) => {
         try {
-          await apiClient.delete(`/protected/categories/${value}`);
+          await apiClient.delete(`/protected/categories/${encodeURIComponent(value)}`);
 
           // Refresh categories from server
           await get().fetchCategories();
@@ -472,7 +472,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Edit a payment method option
       editPaymentMethod: async (oldValue, newPaymentMethod) => {
         try {
-          await apiClient.put(`/protected/payment-methods/${oldValue}`, newPaymentMethod);
+          await apiClient.put(`/protected/payment-methods/${encodeURIComponent(oldValue)}`, newPaymentMethod);
 
           // Refresh payment methods from server
           await get().fetchPaymentMethods();
@@ -485,7 +485,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Delete a payment method option
       deletePaymentMethod: async (value) => {
         try {
-          await apiClient.delete(`/protected/payment-methods/${value}`);
+          await apiClient.delete(`/protected/payment-methods/${encodeURIComponent(value)}`);
 
           // Refresh payment methods from server
           await get().fetchPaymentMethods();

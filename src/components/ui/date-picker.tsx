@@ -1,6 +1,8 @@
 import * as React from "react"
 import { Calendar, ChevronDown } from "lucide-react"
-import { format } from "date-fns"
+import { format, addDays, startOfWeek } from "date-fns"
+import { enUS, zhCN } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,13 +20,42 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   disabled = false,
   className
 }: DatePickerProps) {
+  const { t, i18n } = useTranslation('common')
   const [open, setOpen] = React.useState(false)
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value)
   const [viewDate, setViewDate] = React.useState<Date>(value || new Date())
+
+  const locale = React.useMemo(() => {
+    const lang = (i18n.language || 'en').toLowerCase()
+    if (lang.startsWith('zh')) {
+      return zhCN
+    }
+    return enUS
+  }, [i18n.language])
+
+  const effectivePlaceholder = placeholder ?? t('pickDate')
+
+  const months = React.useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => ({
+        value: index,
+        label: format(new Date(2020, index, 1), 'LLLL', { locale })
+      })),
+    [locale]
+  )
+
+  const weekDays = React.useMemo(() => {
+    const start = startOfWeek(new Date(), { locale })
+    return Array.from({ length: 7 }, (_, index) =>
+      format(addDays(start, index), 'EEEEE', { locale })
+    )
+  }, [locale])
+
+  const weekStart = React.useMemo(() => startOfWeek(new Date(), { locale }).getDay(), [locale])
 
   React.useEffect(() => {
     setSelectedDate(value)
@@ -35,20 +66,6 @@ export function DatePicker({
 
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 30 }, (_, i) => currentYear - 15 + i)
-  const months = [
-    { value: 0, label: "January" },
-    { value: 1, label: "February" },
-    { value: 2, label: "March" },
-    { value: 3, label: "April" },
-    { value: 4, label: "May" },
-    { value: 5, label: "June" },
-    { value: 6, label: "July" },
-    { value: 7, label: "August" },
-    { value: 8, label: "September" },
-    { value: 9, label: "October" },
-    { value: 10, label: "November" },
-    { value: 11, label: "December" }
-  ]
 
   const handleMonthChange = (monthValue: string) => {
     const monthIndex = parseInt(monthValue)
@@ -80,17 +97,14 @@ export function DatePicker({
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   }
 
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-  }
-
   const renderCalendarDays = () => {
     const daysInMonth = getDaysInMonth(viewDate)
-    const firstDay = getFirstDayOfMonth(viewDate)
+    const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay()
+    const leadingBlanks = (firstDay - weekStart + 7) % 7
     const days = []
 
     // Empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
+    for (let i = 0; i < leadingBlanks; i++) {
       days.push(<div key={`empty-${i}`} className="h-8 w-8" />)
     }
 
@@ -139,7 +153,7 @@ export function DatePicker({
           <span className="flex items-center gap-2 flex-1 min-w-0">
             <Calendar className="h-4 w-4 shrink-0" />
             <span className="truncate">
-              {selectedDate ? format(selectedDate, "PPP") : placeholder}
+              {selectedDate ? format(selectedDate, "PPP", { locale }) : effectivePlaceholder}
             </span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -155,7 +169,7 @@ export function DatePicker({
               onClick={() => handleQuickSelect(new Date())}
               className="text-xs h-7 px-2"
             >
-              Today
+              {t('today')}
             </Button>
             <Button
               variant="ghost"
@@ -167,7 +181,7 @@ export function DatePicker({
               }}
               className="text-xs h-7 px-2"
             >
-              Tomorrow
+              {t('tomorrow')}
             </Button>
             <Button
               variant="ghost"
@@ -179,7 +193,7 @@ export function DatePicker({
               }}
               className="text-xs h-7 px-2"
             >
-              Next Week
+              {t('nextWeek')}
             </Button>
           </div>
 
@@ -220,8 +234,8 @@ export function DatePicker({
           <div className="space-y-2">
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                <div key={day} className="h-8 w-8 text-center text-sm font-medium text-muted-foreground flex items-center justify-center">
+              {weekDays.map((day, index) => (
+                <div key={`${day}-${index}`} className="h-8 w-8 text-center text-sm font-medium text-muted-foreground flex items-center justify-center">
                   {day}
                 </div>
               ))}
