@@ -2,9 +2,12 @@ version: '3.8'
 
 services:
   subscription-manager:
-    build: 
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/huhusmang/subscription-management:latest
+    # To build locally instead of pulling the published image, comment the image line
+    # above and uncomment the build section below.
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: subscription-manager
     env_file:
       - .env

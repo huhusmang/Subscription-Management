@@ -94,25 +94,39 @@ A modern subscription management system that helps users easily manage and track
 
 ### Docker Deployment (Recommended)
 
-1. **Clone the project**
-```bash
-git clone <repository-url>
-cd subscription-management
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd subscription-management
+   ```
 
 2. **Configure environment variables**
-```bash
-cp .env.production.example .env
-# Edit the .env file and set necessary configurations
-```
+   ```bash
+   cp .env.production.example .env
+   # Open the .env file to fill in or modify parameters (such as port, database path, Telegram settings, etc.)
+   ```
 
-3. **Start services**
-```bash
-docker-compose up -d
-```
+3. **Choose image source and start the service**
+   
+   **A. Start with the latest published image (fastest and simplest)**
+   ```bash
+   docker compose up -d
+   ```
+   - By default, the latest image (`ghcr.io/huhusmang/subscription-management:latest`) will be used.
+   - If you want to use a specific tag, edit the `image:` field in `docker-compose.yml`, or pull manually:
+     ```bash
+     docker pull ghcr.io/huhusmang/subscription-management:<tag>
+     ```
+
+   **B. Build the image locally (optional)**
+   - Comment out the `image` line and uncomment the `build` section in `docker-compose.yml`, then:
+     ```bash
+     docker compose build && docker compose up -d
+     ```
 
 4. **Access the application**
-- Frontend interface: http://localhost:3001
+   - Frontend: http://localhost:3001
+   - The default port can be customized in the `.env` file (if you change it, make sure to update the `ports` setting accordingly)
 
 ### Local Development
 
@@ -204,6 +218,11 @@ SCHEDULER_TIMEZONE=UTC
 SCHEDULER_CHECK_TIME=09:00
 NOTIFICATION_DEFAULT_ADVANCE_DAYS=7
 NOTIFICATION_DEFAULT_REPEAT_NOTIFICATION=false
+
+# Container image selection (optional)
+# IMAGE_TAG controls which published image tag docker compose uses
+# e.g. IMAGE_TAG=sha-d025f79 or IMAGE_TAG=main or IMAGE_TAG=latest
+# IMAGE_TAG=latest
 ```
 
 ### Database Management

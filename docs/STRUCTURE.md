@@ -39,4 +39,5 @@ subscription-management/
 │   ├── config/            # 配置文件
 │   └── scripts/           # 脚本文件
 ├── docs/                  # 核心文档
+│   └── DEPLOYMENT.zh-CN.md# 部署指南
 ```

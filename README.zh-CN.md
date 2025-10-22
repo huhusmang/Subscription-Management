@@ -92,27 +92,41 @@
 - Node.js 20+
 - Docker & Docker Compose (推荐)
 
-### Docker 部署 (推荐)
+### Docker 部署（推荐）
 
-1. **克隆项目**
-```bash
-git clone <repository-url>
-cd subscription-management
-```
+1. **克隆项目代码**
+   ```bash
+   git clone <repository-url>
+   cd subscription-management
+   ```
 
 2. **配置环境变量**
-```bash
-cp .env.production.example .env
-# 编辑 .env 文件，设置必要的配置
-```
+   ```bash
+   cp .env.production.example .env
+   # 打开 .env 文件，填写或修改相关参数（如端口、数据库路径、Telegram 配置等）
+   ```
 
-3. **启动服务**
-```bash
-docker-compose up -d
-```
+3. **选择镜像来源并启动服务**
+   
+   **A. 从 GHCR 拉取官方镜像并启动（快速、最简方式）**
+   ```bash
+   docker compose up -d
+   ```
+   - 默认使用最新版镜像（`ghcr.io/huhusmang/subscription-management:latest`）。
+   - 如需指定具体 tag，可编辑 `docker-compose.yml` 的 `image:` 字段，或用如下命令手动拉取：
+     ```bash
+     docker pull ghcr.io/huhusmang/subscription-management:<tag>
+     ```
 
-4. **访问应用**
-- 前端界面: http://localhost:3001
+   **B. 本地自定义构建镜像运行**
+   - 在 `docker-compose.yml` 注释掉 `image` 行，并取消 `build` 部分的注释：
+     ```bash
+     docker compose build && docker compose up -d
+     ```
+
+4. **访问应用界面**
+   - 前端访问：http://localhost:3001
+   - 默认端口可在 `.env` 文件中自定义（如需更换，确保 `ports` 配置同步修改）
 
 ### 本地开发
 
@@ -204,6 +218,11 @@ SCHEDULER_TIMEZONE=Asia/Shanghai
 SCHEDULER_CHECK_TIME=09:00
 NOTIFICATION_DEFAULT_ADVANCE_DAYS=7
 NOTIFICATION_DEFAULT_REPEAT_NOTIFICATION=false
+
+# 容器镜像选择（可选）
+# IMAGE_TAG 控制 docker compose 使用的镜像标签
+# 例如：IMAGE_TAG=sha-d025f79 或 IMAGE_TAG=main 或 IMAGE_TAG=latest
+# IMAGE_TAG=latest
 ```
 
 ### 数据库管理
