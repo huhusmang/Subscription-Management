@@ -446,7 +446,7 @@ export function ExpenseReportsPage() {
               <TabsTrigger value="yearly">{t('yearly')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="monthly" className="space-y-4">
+            <TabsContent value="monthly" className="space-y-4" forceMount>
               <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
                 <ExpenseTrendChart
                   data={monthlyExpenses}
@@ -480,7 +480,7 @@ export function ExpenseReportsPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="yearly" className="space-y-4">
+            <TabsContent value="yearly" className="space-y-4" forceMount>
               {isLoadingYearlyExpenses ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="text-center">

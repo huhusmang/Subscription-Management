@@ -4,6 +4,7 @@ import { ChartContainer, ChartConfig } from "@/components/ui/chart"
 import { formatCurrencyAmount } from "@/utils/currency"
 import { CategoryExpense } from "@/lib/expense-analytics-api"
 import { useSubscriptionStore } from "@/store/subscriptionStore"
+import { memo } from "react"
 import { useTranslation } from "react-i18next"
 
 interface CategoryPieChartProps {
@@ -27,9 +28,20 @@ const COLORS = [
   "hsl(var(--chart-5))",
 ]
 
-export function CategoryPieChart({ data, currency, className }: CategoryPieChartProps) {
+const arePropsEqual = (
+  prev: CategoryPieChartProps,
+  next: CategoryPieChartProps
+) => {
+  return (
+    prev.currency === next.currency &&
+    prev.className === next.className &&
+    prev.data === next.data
+  )
+}
+
+function CategoryPieChartComponent({ data, currency, className }: CategoryPieChartProps) {
   const { t } = useTranslation('reports')
-  const { categories } = useSubscriptionStore()
+  const categories = useSubscriptionStore((state) => state.categories)
   
   // Get category label
   const getCategoryLabel = (categoryValue: string) => {
@@ -134,3 +146,5 @@ export function CategoryPieChart({ data, currency, className }: CategoryPieChart
     </Card>
   )
 }
+
+export const CategoryPieChart = memo(CategoryPieChartComponent, arePropsEqual)

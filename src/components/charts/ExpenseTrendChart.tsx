@@ -5,7 +5,7 @@ import { ChartContainer, ChartConfig } from "@/components/ui/chart"
 import { formatCurrencyAmount } from "@/utils/currency"
 import { MonthlyExpense } from "@/lib/expense-analytics-api"
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 interface ExpenseTrendChartProps {
@@ -58,7 +58,19 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ExpenseTrendChart({ data, categoryData, currency, className }: ExpenseTrendChartProps) {
+const arePropsEqual = (
+  prev: ExpenseTrendChartProps,
+  next: ExpenseTrendChartProps
+) => {
+  return (
+    prev.currency === next.currency &&
+    prev.className === next.className &&
+    prev.data === next.data &&
+    prev.categoryData === next.categoryData
+  )
+}
+
+function ExpenseTrendChartComponent({ data, categoryData, currency, className }: ExpenseTrendChartProps) {
   const { t } = useTranslation('reports')
   const [chartType, setChartType] = useState<'line' | 'groupedBar'>('line')
   
@@ -292,3 +304,5 @@ export function ExpenseTrendChart({ data, categoryData, currency, className }: E
     </Card>
   )
 }
+
+export const ExpenseTrendChart = memo(ExpenseTrendChartComponent, arePropsEqual)

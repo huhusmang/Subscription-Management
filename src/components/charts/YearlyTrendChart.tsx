@@ -5,7 +5,7 @@ import { ChartContainer, ChartConfig } from "@/components/ui/chart"
 import { formatCurrencyAmount } from "@/utils/currency"
 import { YearlyExpense } from "@/lib/expense-analytics-api"
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 interface YearlyTrendChartProps {
@@ -56,7 +56,19 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function YearlyTrendChart({ data, categoryData, currency, className }: YearlyTrendChartProps) {
+const arePropsEqual = (
+  prev: YearlyTrendChartProps,
+  next: YearlyTrendChartProps
+) => {
+  return (
+    prev.currency === next.currency &&
+    prev.className === next.className &&
+    prev.data === next.data &&
+    prev.categoryData === next.categoryData
+  )
+}
+
+function YearlyTrendChartComponent({ data, categoryData, currency, className }: YearlyTrendChartProps) {
   const { t } = useTranslation('reports')
   const [chartType, setChartType] = useState<'line' | 'groupedBar'>('line')
   
@@ -284,3 +296,5 @@ export function YearlyTrendChart({ data, categoryData, currency, className }: Ye
     </Card>
   )
 }
+
+export const YearlyTrendChart = memo(YearlyTrendChartComponent, arePropsEqual)
