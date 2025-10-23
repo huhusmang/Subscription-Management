@@ -5,12 +5,12 @@ import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { useSettingsStore } from "@/store/settingsStore"
 
 function ThemeSync() {
-  const { fetchSettings } = useSettingsStore()
+  const ensureSettings = useSettingsStore((state) => state.ensureSettings)
 
   React.useEffect(() => {
     // Fetch settings on app start to sync with backend
-    fetchSettings()
-  }, [fetchSettings])
+    ensureSettings()
+  }, [ensureSettings])
 
   return null
 }

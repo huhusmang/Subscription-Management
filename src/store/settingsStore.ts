@@ -5,6 +5,8 @@ import { logger } from '@/utils/logger'
 import { BASE_CURRENCY, DEFAULT_EXCHANGE_RATES, type CurrencyType, SUPPORTED_CURRENCIES } from '@/config/currency'
 import { apiClient } from '@/utils/api-client'
 
+const SETTINGS_STALE_TIME = 5 * 60 * 1000 // 5 minutes
+
 // Helper function to validate currency type
 const validateCurrency = (currency: string | undefined): CurrencyType => {
   if (currency && SUPPORTED_CURRENCIES.includes(currency as CurrencyType)) {
@@ -57,8 +59,11 @@ interface SettingsState {
   // Data management
   resetSettings: () => void
   fetchSettings: () => Promise<void>
+  ensureSettings: (options?: { force?: boolean }) => Promise<void>
   isLoading: boolean
   error: string | null
+  initialized: boolean
+  lastFetchedAt: number | null
 }
 
 export const initialSettings = {
@@ -71,7 +76,9 @@ export const initialSettings = {
   lastExchangeRateUpdate: null,
   exchangeRateConfigStatus: null,
   isLoading: false,
-  error: null
+  error: null,
+  initialized: false,
+  lastFetchedAt: null
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -91,7 +98,13 @@ export const useSettingsStore = create<SettingsState>()(
               : initialSettings.showOriginalCurrency,
           }
 
-          set({ ...settings, isLoading: false })
+          set({
+            ...settings,
+            isLoading: false,
+            initialized: true,
+            lastFetchedAt: Date.now(),
+            error: null
+          })
           // Don't apply theme here - let next-themes handle it
 
           // 获取汇率数据和配置状态
@@ -103,13 +116,25 @@ export const useSettingsStore = create<SettingsState>()(
           const errorObj = error as { status?: number; message?: string }
           if (errorObj.status === 404) {
             logger.warn('Settings not found on backend. Using local/default settings.')
-            set({ isLoading: false })
+            set({ isLoading: false, initialized: true, lastFetchedAt: Date.now(), error: null })
             return
           }
           logger.error('Error fetching settings:', error)
           const errorMessage = errorObj.message || 'Unknown error occurred'
           set({ error: errorMessage, isLoading: false })
         }
+      },
+      ensureSettings: async (options) => {
+        const { force = false } = options ?? {}
+        const { initialized, lastFetchedAt } = get()
+
+        if (!force && initialized) {
+          if (lastFetchedAt && Date.now() - lastFetchedAt < SETTINGS_STALE_TIME) {
+            return
+          }
+        }
+
+        await get().fetchSettings()
       },
       
       setCurrency: async (currency) => {

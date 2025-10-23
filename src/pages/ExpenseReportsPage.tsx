@@ -32,9 +32,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 
 export function ExpenseReportsPage() {
-  const { fetchSubscriptions, fetchCategories } = useSubscriptionStore()
+  const ensureSubscriptions = useSubscriptionStore((state) => state.ensureInitialized)
   const { t } = useTranslation(['reports', 'common'])
-  const { currency: userCurrency, fetchSettings } = useSettingsStore()
+  const userCurrency = useSettingsStore((state) => state.currency)
+  const ensureSettings = useSettingsStore((state) => state.ensureSettings)
   
   // Filter states
   const [selectedDateRange] = useState('Last 12 Months')
@@ -45,10 +46,11 @@ export function ExpenseReportsPage() {
 
   // Fetch data when component mounts
   const initializeData = useCallback(async () => {
-    await fetchSubscriptions()
-    await fetchCategories()
-    await fetchSettings()
-  }, [fetchSubscriptions, fetchCategories, fetchSettings])
+    await Promise.all([
+      ensureSubscriptions(),
+      ensureSettings()
+    ])
+  }, [ensureSettings, ensureSubscriptions])
 
   useEffect(() => {
     initializeData()

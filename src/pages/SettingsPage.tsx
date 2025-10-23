@@ -71,14 +71,14 @@ export function SettingsPage() {
     setTheme,
     resetSettings,
     isLoading,
-    fetchSettings,
   } = useSettingsStore()
+  const ensureSettings = useSettingsStore((state) => state.ensureSettings)
 
   const { subscriptions, resetSubscriptions, addSubscription } = useSubscriptionStore()
 
   const initializeSettings = useCallback(() => {
-    fetchSettings()
-  }, [fetchSettings])
+    void ensureSettings({ force: true })
+  }, [ensureSettings])
 
   useEffect(() => {
     initializeSettings()

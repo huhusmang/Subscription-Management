@@ -71,7 +71,7 @@ export function SubscriptionsPage() {
   const [detailSubscription, setDetailSubscription] = useState<Subscription | null>(null)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
-  const { fetchSettings } = useSettingsStore()
+  const ensureSettings = useSettingsStore((state) => state.ensureSettings)
   
   const {
     subscriptions,
@@ -82,7 +82,7 @@ export function SubscriptionsPage() {
     deleteSubscription,
     fetchSubscriptions,
     getUniqueCategories,
-    initializeData,
+    ensureInitialized,
 
     manualRenewSubscription,
     isLoading
@@ -90,9 +90,11 @@ export function SubscriptionsPage() {
 
   // Initialize subscriptions without auto-renewals
   const initialize = useCallback(async () => {
-    await fetchSettings()
-    await initializeData()
-  }, [fetchSettings, initializeData])
+    await Promise.all([
+      ensureSettings(),
+      ensureInitialized()
+    ])
+  }, [ensureInitialized, ensureSettings])
 
   useEffect(() => {
     initialize()

@@ -38,7 +38,8 @@ function HomePage() {
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
   // Get the default view from settings
-  const { currency: userCurrency, fetchSettings } = useSettingsStore()
+  const userCurrency = useSettingsStore((state) => state.currency)
+  const ensureSettings = useSettingsStore((state) => state.ensureSettings)
   
   const {
     subscriptions,
@@ -48,7 +49,7 @@ function HomePage() {
     getUpcomingRenewals,
     getRecentlyPaid,
     getSpendingByCategory,
-    initializeData,
+    ensureInitialized,
     initializeWithRenewals,
     isLoading
   } = useSubscriptionStore()
@@ -61,9 +62,11 @@ function HomePage() {
 
   // Initialize subscriptions without auto-renewals
   const initialize = useCallback(async () => {
-    await fetchSettings()
-    await initializeData()
-  }, [fetchSettings, initializeData])
+    await Promise.all([
+      ensureSettings(),
+      ensureInitialized()
+    ])
+  }, [ensureInitialized, ensureSettings])
 
   useEffect(() => {
     initialize()

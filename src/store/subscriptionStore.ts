@@ -5,6 +5,8 @@ import { useSettingsStore } from './settingsStore'
 
 import { apiClient } from '@/utils/api-client'
 
+const SUBSCRIPTIONS_STALE_TIME = 5 * 60 * 1000 // 5 minutes
+
 interface SubscriptionApiData {
   id: number
   name: string
@@ -177,6 +179,8 @@ interface SubscriptionState {
   subscriptionPlans: SubscriptionPlanOption[]
   isLoading: boolean
   error: string | null
+  initialized: boolean
+  lastFetchedAt: number | null
 
   // CRUD operations
   addSubscription: (subscription: Omit<Subscription, 'id' | 'lastBillingDate'>) => Promise<{ error: unknown | null }>
@@ -195,7 +199,8 @@ interface SubscriptionState {
 
   // Combined initialization
   initializeWithRenewals: () => Promise<void>
-  initializeData: () => Promise<void>
+  initializeData: (options?: { force?: boolean }) => Promise<void>
+  ensureInitialized: (options?: { force?: boolean }) => Promise<void>
 
   // Option management
   addCategory: (category: CategoryOption) => Promise<void>
@@ -270,6 +275,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       subscriptionPlans: initialSubscriptionPlans,
       isLoading: false,
       error: null,
+      initialized: false,
+      lastFetchedAt: null,
       
       // Fetch subscriptions from the backend API
       fetchSubscriptions: async () => {
@@ -278,11 +285,21 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           const data = await apiClient.get<SubscriptionApiData[]>('/subscriptions')
 
           const transformedData = data.map(transformFromApi)
-          set({ subscriptions: transformedData, isLoading: false })
+          set({
+            subscriptions: transformedData,
+            isLoading: false,
+            initialized: true,
+            lastFetchedAt: Date.now()
+          })
         } catch (error: unknown) {
           console.error('Error fetching subscriptions:', error)
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-          set({ error: errorMessage, isLoading: false, subscriptions: [] }) // Clear subscriptions on error
+          set({
+            error: errorMessage,
+            isLoading: false,
+            subscriptions: [],
+            initialized: false
+          }) // Clear subscriptions on error
         }
       },
 
@@ -718,7 +735,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       },
 
       // Simple initialization method without auto-renewals
-      initializeData: async () => {
+      initializeData: async (options) => {
+        const { force = false } = options ?? {}
+        const { initialized, lastFetchedAt } = get()
+
+        if (!force && initialized) {
+          if (lastFetchedAt && Date.now() - lastFetchedAt < SUBSCRIPTIONS_STALE_TIME) {
+            return
+          }
+        }
+
         set({ isLoading: true, error: null })
         try {
           // Fetch all data in parallel
@@ -727,12 +753,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             get().fetchCategories(),
             get().fetchPaymentMethods()
           ])
-          set({ isLoading: false })
+          set({ isLoading: false, initialized: true, lastFetchedAt: Date.now() })
         } catch (error: unknown) {
           console.error('Error during initialization:', error)
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-          set({ error: errorMessage, isLoading: false })
+          set({ error: errorMessage, isLoading: false, initialized: false })
         }
+      },
+
+      ensureInitialized: async (options) => {
+        await get().initializeData(options)
       },
 
       // Combined initialization method with renewals (for manual trigger)
@@ -745,6 +775,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             get().fetchCategories(),
             get().fetchPaymentMethods()
           ])
+
+          set({ initialized: true, lastFetchedAt: Date.now() })
 
           // Then process renewals without additional fetches
           const [autoRenewalResult, expiredResult] = await Promise.all([
@@ -770,11 +802,11 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           if (expiredResult.errors > 0) {
             console.warn(`Failed to cancel ${expiredResult.errors} expired subscription(s)`)
           }
-          set({ isLoading: false })
+          set({ isLoading: false, initialized: true, lastFetchedAt: Date.now() })
         } catch (error: unknown) {
           console.error('Error during initialization:', error)
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-          set({ error: errorMessage, isLoading: false })
+          set({ error: errorMessage, isLoading: false, initialized: false })
         }
       }
     }),
