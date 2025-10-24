@@ -116,13 +116,28 @@
    - 如需指定具体 tag，可编辑 `docker-compose.yml` 的 `image:` 字段，或用如下命令手动拉取：
      ```bash
      docker pull ghcr.io/huhusmang/subscription-management:<tag>
-     ```
+   ```
 
    **B. 本地自定义构建镜像运行**
    - 在 `docker-compose.yml` 注释掉 `image` 行，并取消 `build` 部分的注释：
      ```bash
      docker compose build && docker compose up -d
      ```
+
+   **C. 单条命令运行（适用于面板/命令执行器）**
+   ```bash
+   docker run -d \
+     --name subscription-manager \
+     -e SESSION_SECRET=your_session_secret \
+     -e ADMIN_USERNAME=admin \
+     -e ADMIN_PASSWORD=your_admin_password \
+     -e PORT=3001 \
+     -v subscription-data:/app/data \
+     -p 3001:3001 \
+     ghcr.io/huhusmang/subscription-management:latest
+   ```
+   - 如需更多可选项，可继续追加 `-e`（例如 `-e TIANAPI_KEY=...`、`-e BASE_CURRENCY=USD`）。
+   - 也推荐使用更安全的密钥管理方式，改为 `--env-file /绝对路径/.env`。
 
 4. **访问应用界面**
    - 前端访问：http://localhost:3001
