@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/utils/api-client';
@@ -50,6 +51,7 @@ export function LanguageSwitcher() {
       <SelectTrigger className={cn(
         "w-auto min-w-0 px-3 py-2 h-9 gap-1.5"
       )}>
+        <Globe className="h-4 w-4" />
         <SelectValue>
           {currentLanguage?.name || t('language')}
         </SelectValue>

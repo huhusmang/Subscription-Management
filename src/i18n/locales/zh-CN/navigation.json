@@ -5,5 +5,6 @@
   "settings": "设置",
   "dashboard": "仪表板",
   "expenseReports": "支出报表",
-  "notifications": "通知历史"
+  "notifications": "通知历史",
+  "logout": "登出"
 }
